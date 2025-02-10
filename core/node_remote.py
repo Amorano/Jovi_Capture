@@ -17,7 +17,7 @@ from . import \
     EnumConvertType, StreamNodeHeader, \
     deep_merge, parse_param
 
-from .support.stream import MediaStreamURL
+from .support.stream import MediaStreamBase
 from .support.image import cv2tensor_full
 
 # ==============================================================================

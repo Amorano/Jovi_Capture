@@ -19,7 +19,7 @@ from . import \
     EnumConvertType, StreamNodeHeader, \
     deep_merge, parse_param
 
-from .support.stream import MediaStreamURL
+from .support.stream import MediaStreamBase
 from .support.image import cv2tensor_full
 
 # ==============================================================================
@@ -50,13 +50,32 @@ def cameraList() -> list:
 # === SUPPORT - CLASS ===
 # ==============================================================================
 
-class MediaStreamCamera(MediaStreamURL):
+class MediaStreamCamera(MediaStreamBase):
     """A system device like a web camera."""
     def __init__(self, fps:float=30) -> None:
         self.__focus = 0
         self.__exposure = 1
         self.__zoom = 0
+        self.__flip: bool = False
         super().__init__(fps=fps)
+
+    def frame(self):
+        frame = super().frame
+        try:
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGRA)
+            if self.__flip:
+                frame = cv2.flip(frame, 1)
+        except:
+            pass
+        return frame
+
+    @property
+    def flip(self) -> bool:
+        return self.__flip
+
+    @flip.setter
+    def flip(self, flip: bool) -> None:
+        self.__flip = flip
 
     @property
     def zoom(self) -> float:
@@ -117,68 +136,47 @@ Capture frames from a web camera. Supports batch processing, allowing multiple f
         return deep_merge({
             "optional": {
                 "CAMERA": (cls.CAMERAS, {"default": camera_default, "tooltip": "The camera from the auto-scanned list"}),
-                "ZOOM": ("FLOAT", {"min": 0, "max": 100, "step": 1, "default": 50, "tooltip": "Camera's own zoom level"}),
+                "FLIP": ("BOOLEAN", {"default": False, "tooltip": "Camera flip image left-to-right"}),
+                "ZOOM": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1, "tooltip": "Camera zoom"}),
+                "FOCUS": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1, "tooltip": "Camera focus"}),
+                "EXPOSURE": ("INT", {"default": 50, "min": 0, "max": 100, "step": 1, "tooltip": "Camera exsposure"}),
             }
         }, d)
 
     def __init__(self, *arg, **kw) -> None:
         super().__init__(*arg, **kw)
-        self.__device = None
+        self.device = MediaStreamCamera()
 
-    def run(self, **kw) -> Tuple[torch.Tensor, torch.Tensor]:
-        # get device?
-
-        self.__device = MediaStreamCamera(fps)
-
-        wait = parse_param(kw, "WAIT", EnumConvertType.BOOLEAN, False)[0]
-        if wait:
-            return self.last
-
+    def run(self, **kw) -> Tuple[torch.Tensor, ...]:
         images = []
+        self.device.fps = parse_param(kw, "FPS", EnumConvertType.INT, 30)[0]
         batch_size = parse_param(kw, "BATCH", EnumConvertType.INT, 1, 1)[0]
-        fps = parse_param(kw, "FPS", EnumConvertType.INT, 30)[0]
+        if parse_param(kw, "PAUSE", EnumConvertType.BOOLEAN, False)[0]:
+            self.device.pause()
+        else:
+            self.device.play()
+        #self.device.timeout = parse_param(kw, "TIMEOUT", EnumConvertType.INT, 5, 1, 30)[0]
+        url = parse_param(kw, "CAMERA", EnumConvertType.STRING, "")[0]
+        self.device.url = int(url.split('-')[0].strip())
+        # is in milliseconds
+        self.device.flip = parse_param(kw, "FLIP", EnumConvertType.BOOLEAN, False)[0]
+        self.device.zoom = parse_param(kw, "ZOOM", EnumConvertType.INT, 0, 0, 100)[0] / 100.
+        self.device.focus = parse_param(kw, "FOCUS", EnumConvertType.INT, 0, 0, 100)[0] / 100.
+        self.device.exposure = parse_param(kw, "EXPOSURE", EnumConvertType.INT, 0, 0, 100)[0] / 100.
+
+        rate = 1. / self.device.fps
         pbar = ProgressBar(batch_size)
-        rate = 1. / fps
-
-        camera = parse_param(kw, "CAMERA", EnumConvertType.STRING, "")[0]
-        camera = camera.split('-')[0].strip()
-        try:
-            _ = int(camera)
-            camera = str(camera)
-        except:
-            camera = ""
-
-        if self.__device is not None:
-
-            if wait:
-                self.__device.pause()
+        for idx in range(batch_size):
+            if (img := self.device.frame()) is None:
+                images.append(self.empty)
             else:
-                self.__device.play()
-
-            self.__device.fps = fps
-            self.__device.zoom = parse_param(kw, "ZOOM", EnumConvertType.FLOAT, 0, 0, 100)[0] / 100.
-            # is in milliseconds
-            timeout = parse_param(kw, "TIMEOUT", EnumConvertType.INT, 5, 1, 30)[0] * 1000
-
-            for idx in range(batch_size):
-                start_time = time.perf_counter()
-                while (time.perf_counter() - start_time) < timeout:
-                    if (img := self.__device.frame):
-                        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGRA)
-                        images.append(cv2tensor_full(img))
-                        break
-
-                if img is None:
-                    logger.error("image failed to capture from device")
-                    break
-
-                pbar.update_absolute(idx)
-                if batch_size > 1:
-                    time.sleep(rate)
+                images.append(cv2tensor_full(img))
+            if batch_size > 1:
+                time.sleep(rate)
+            pbar.update_absolute(idx)
 
         if len(images) == 0:
             logger.error("no images captured")
-            return []
+            return self.empty
 
-        self.last = [torch.stack(i) for i in zip(*images)]
-        return self.last
+        return [torch.stack(i) for i in zip(*images)]

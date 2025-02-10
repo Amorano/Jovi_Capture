@@ -5,8 +5,7 @@ Core
 
 import time
 import threading
-
-from typing import Any, Tuple
+from typing import Any
 
 import cv2
 from loguru import logger
@@ -17,86 +16,84 @@ from loguru import logger
 
 class MediaStreamBase:
 
-    TIMEOUT = 5.
-
-    def __init__(self, fps:float=30) -> None:
-        self.__quit = False
-        self.__paused = False
-        self.__captured = False
+    def __init__(self, fps:float=30, timeout:int=5) -> None:
         self.__fps = fps
-        self.__timeout = None
+        self.__timeout = timeout
+        self.__running = True
+        self.__quit = False
         self.__frame = None
+        self.__source = None
+        self.__url = None
         self.__thread = threading.Thread(target=self.__run, daemon=True)
         self.__thread.start()
 
     def __run(self) -> None:
         while not self.__quit:
+            if not self.__source or not self.__source.isOpened():
+                logger.error("waiting on device")
+                time.sleep(1)
+                continue
 
             delta = 1. / self.__fps
-            waste = time.perf_counter() + delta
+            start_time = time.perf_counter()
+            if self.__running:
+                ret, frame = self.__source.read()
+                self.__frame = frame
+                """
+                if not ret:
+                    count = int(self.__source.get(cv2.CAP_PROP_FRAME_COUNT))
+                    pos = int(self.__source.get(cv2.CAP_PROP_POS_FRAMES))
+                    if pos >= count:
+                        self.__source.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                        ret, self.__frame = self.__source.read()
+                """
 
-            if not self.__paused:
-                if not self.__captured:
-                    pause = self.__paused
-                    self.__paused = True
-
-                    if not self.capture():
-                        self.__quit = True
-                        break
-
-                    self.__paused = pause
-                    self.__captured = True
-                    logger.info(f"CAPTURED")
-
-                if self.__timeout is None and self.TIMEOUT > 0:
-                    self.__timeout = time.perf_counter() + self.TIMEOUT
-
-                # call the run capture frame command on subclasses
-                newframe = self.callback()
-                if newframe is not None:
-                    self.__frame = newframe
-                    self.__timeout = None
-
-            if self.__timeout is not None and time.perf_counter() > self.__timeout:
-                self.__timeout = None
-                self.__quit = True
-                logger.warning(f"TIMEOUT")
-
-            waste = max(waste - time.perf_counter(), 0)
-            time.sleep(waste)
-
-        logger.info(f"STOPPED")
-        self.end()
-
-    def __del__(self) -> None:
-        self.end()
+            elapsed = time.perf_counter() - start_time
+            time.sleep(max(delta - elapsed, 0))
+        self.__end()
 
     def __repr__(self) -> str:
         return self.__class__.__name__
 
-    def callback(self) -> Tuple[bool, Any]:
-        return None
-
-    def capture(self) -> None:
-        self.__captured = True
-        return self.__captured
-
-    def end(self) -> None:
-        self.release()
+    def __end(self) -> None:
         self.__quit = True
-
-    def release(self) -> None:
-        self.__captured = False
+        if self.__thread:
+            self.__thread.join(timeout=self.__timeout)
+        if self.__source is not None:
+            self.__source.release()
+            self.__source = None
 
     def play(self) -> None:
-        self.__paused = False
+        self.__running = True
 
     def pause(self) -> None:
-        self.__paused = True
+        self.__running = False
 
     @property
-    def captured(self) -> bool:
-        return self.__captured
+    def url(self) -> str:
+        return self.__url
+
+    @url.setter
+    def url(self, url:str) -> None:
+        if url == self.__url:
+            return
+
+        if self.__source is not None:
+            self.__source.release()
+            self.__source = None
+
+        new_source = cv2.VideoCapture(url, cv2.CAP_ANY)
+        if new_source.isOpened():
+            self.__source = new_source
+            self.__url = url
+            logger.info(f"Captured camera device: {self.__url}")
+            return
+
+        logger.error(f"Failed to open camera source: {url}")
+
+    @property
+    def source(self) -> cv2.VideoCapture:
+        return self.__source
 
     @property
     def frame(self) -> Any:
@@ -108,66 +105,17 @@ class MediaStreamBase:
 
     @fps.setter
     def fps(self, val: float) -> None:
-        self.__fps = max(1, val)
-
-class MediaStreamURL(MediaStreamBase):
-    """A media point (could be a camera index)."""
-    def __init__(self, fps:float=30) -> None:
-        self.__source = None
-        self.__last = None
-        super().__init__(fps)
-
-    def callback(self) -> Tuple[bool, Any]:
-        ret = False
-        try:
-            ret, result = self.__source.read()
-        except:
-            pass
-
-        if ret:
-            self.__last = result
-            return result
-
-        count = int(self.source.get(cv2.CAP_PROP_FRAME_COUNT))
-        pos = int(self.source.get(cv2.CAP_PROP_POS_FRAMES))
-        if pos >= count:
-            self.source.set(cv2.CAP_PROP_POS_FRAMES, 0)
-            ret, result = self.__source.read()
-
-        # maybe its a single frame -- if we ever got one.
-        if not ret and self.__last is not None:
-            return self.__last
-
-        return result
-
-    def capture(self) -> bool:
-        if self.captured:
-            return True
-        self.__source = cv2.VideoCapture(self.__url, cv2.CAP_ANY)
-        if self.captured:
-            time.sleep(0.3)
-            return True
-        return False
+        self.__fps = min(60, max(1, val))
 
     @property
-    def url(self) -> str:
-        return self.__url
-
-    @url.setter
-    def url(self, url:str) -> None:
-        self.__url = url
-
+    def running(self) -> bool:
+        return self.__running
+    """
     @property
-    def source(self) -> cv2.VideoCapture:
-        return self.__source
+    def timeout(self) -> int:
+        return self.__timeout
 
-    @property
-    def captured(self) -> bool:
-        if self.__source is None:
-            return False
-        return self.__source.isOpened()
-
-    def release(self) -> None:
-        if self.__source is not None:
-            self.__source.release()
-        super().release()
+    @timeout.setter
+    def timeout(self, timeout: int) -> None:
+        self.__timeout = min(30, max(1, timeout))
+    """

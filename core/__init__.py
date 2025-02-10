@@ -373,9 +373,9 @@ class StreamNodeHeader(JOVImageNode):
         return deep_merge(d, {
             "optional": {
                 "FPS": ("INT", {"min": 1, "max": 60, "default": 30, "tooltip": "Framerate to attempt when capturing"}),
+                "BATCH": ("INT", {"default": 1, "min": 1, "tooltip": "Number of frames wanted at the Framerate in FPS"}),
                 "PAUSE": ("BOOLEAN", {"default": False, "tooltip": "If the stream should hold (pause) it's frame capture"}),
-                "BATCH": ("INT", {"default": 1, "tooltip": "Number of frames wanted at the Framerate in FPS"}),
-                "TIMEOUT": ("INT", {"default": 5, "min": 1, "max": 30, "tooltip": "How long to wait before failing if no frames are being captured"})
+                # "TIMEOUT": ("INT", {"default": 5, "min": 1, "max": 30, "tooltip": "How long to wait before failing if no frames are being captured"})
             }
         })
 
@@ -385,4 +385,5 @@ class StreamNodeHeader(JOVImageNode):
         e = torch.zeros((MIN_IMAGE_SIZE, MIN_IMAGE_SIZE, 3), dtype=torch.uint8, device="cpu")
         m = torch.ones((MIN_IMAGE_SIZE, MIN_IMAGE_SIZE, 1), dtype=torch.uint8, device="cpu")
         self.empty = (a, e, m,)
-        self.last = [(a, e, m,)]
+        self.device = None
+

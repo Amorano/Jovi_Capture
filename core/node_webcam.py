@@ -3,8 +3,9 @@ Jovi_Capture - http://www.github.com/amorano/Jovi_Capture
 Capture -- WEBCAM, REMOTE URLS
 """
 
+import os
 import time
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 import cv2
 import torch
@@ -20,10 +21,15 @@ from cozy_comfyui import \
 from cozy_comfyui.image.convert import cv_to_tensor_full
 
 from . import \
-    JOV_SCAN_DEVICES, \
     StreamNodeHeader
 
 from .stream import MediaStreamBase
+
+# ==============================================================================
+# === CONSTANT ===
+# ==============================================================================
+
+JOV_SCAN_DEVICES = os.getenv("JOV_SCAN_DEVICES", "False").lower() in ['1', 'true', 'on']
 
 # ==============================================================================
 # === SUPPORT ===
@@ -122,24 +128,39 @@ class MediaStreamCamera(MediaStreamBase):
 # ==============================================================================
 
 class CameraStreamReader(StreamNodeHeader):
-    NAME = "STREAM WEB CAMERA"
-    CAMERAS = None
+    NAME = "CAMERA"
     DESCRIPTION = """
 Capture frames from a web camera. Supports batch processing, allowing multiple frames to be captured simultaneously. The node provides options for configuring the source, resolution, frame rate, zoom, orientation, and interpolation method. Additionally, it supports capturing frames from multiple monitors or windows simultaneously.
 """
 
     @classmethod
-    def INPUT_TYPES(cls) -> dict:
-        d = super().INPUT_TYPES()
+    def CAMERA_LIST(cls) -> List[str]:
+        cls.CAMERAS = ["NONE"]
+        if not JOV_SCAN_DEVICES:
+            return cls.CAMERAS
 
-        if cls.CAMERAS is None:
-            cameras = cameraList()
-            cls.CAMERAS = cameras if len(cameras) else ["NONE"]
-        camera_default = cls.CAMERAS[0]
+        failed = 0
+        idx = 0
+        while failed < 2:
+            cap = cv2.VideoCapture(idx)
+            if cap.isOpened():
+                w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                f = int(cap.get(cv2.CAP_PROP_FPS))
+                cls.CAMERAS.append(f"{idx} - {w}x{h}x{f}")
+                cap.release()
+            else:
+                failed += 1
+            idx += 1
+        return cls.CAMERAS
+
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, str]:
+        d = super().INPUT_TYPES()
 
         return deep_merge({
             "optional": {
-                "CAMERA": (cls.CAMERAS, {"default": camera_default, "tooltip": "The camera from the auto-scanned list"}),
+                "CAMERA": (lambda: cls.CAMERA_LIST(), {"default": cls.CAMERAS[0], "tooltip": "The camera from the auto-scanned list"}),
                 "FLIP": ("BOOLEAN", {"default": False, "tooltip": "Camera flip image left-to-right"}),
                 "ZOOM": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1, "tooltip": "Camera zoom"}),
                 "FOCUS": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1, "tooltip": "Camera focus"}),

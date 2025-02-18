@@ -4,7 +4,7 @@ Monitor -- Capture Monitor
 """
 
 import time
-from typing import Tuple
+from typing import Tuple, Dict
 
 import cv2
 import torch
@@ -18,7 +18,7 @@ from cozy_comfyui import \
     EnumConvertType, \
     deep_merge, parse_param
 
-from cozy_comfyui.image import cv_to_tensor_full
+from cozy_comfyui.image.convert import cv_to_tensor_full
 
 from . import StreamNodeHeader
 
@@ -27,14 +27,14 @@ from . import StreamNodeHeader
 # ==============================================================================
 
 class MonitorStreamReader(StreamNodeHeader):
-    NAME = "STREAM MONITOR"
+    NAME = "DESKTOP"
     CAMERAS = None
     DESCRIPTION = """
 Capture frames from a desktop monitor. Supports batch processing, allowing multiple frames to be captured simultaneously. The node provides options for configuring the source, resolution, frame rate, zoom, orientation, and interpolation method. Additionally, it supports capturing frames from multiple monitors or windows simultaneously.
 """
 
     @classmethod
-    def INPUT_TYPES(cls) -> dict:
+    def INPUT_TYPES(cls) -> Dict[str, str]:
         d = super().INPUT_TYPES()
 
         return deep_merge({

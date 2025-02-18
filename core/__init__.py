@@ -5,7 +5,7 @@ Core
 
 __version__ = "1.0.0"
 
-import os
+from typing import Dict
 
 import torch
 
@@ -15,18 +15,12 @@ from cozy_comfyui import \
     deep_merge
 
 # ==============================================================================
-# === GLOBAL ===
-# ==============================================================================
-
-JOV_SCAN_DEVICES = os.getenv("JOV_SCAN_DEVICES", "False").lower() in ['1', 'true', 'on']
-
-# ==============================================================================
 # === CLASS ===
 # ==============================================================================
 
 class StreamNodeHeader(CozyImageNode):
     @classmethod
-    def INPUT_TYPES(cls) -> dict:
+    def INPUT_TYPES(cls) -> Dict[str, str]:
         d = super().INPUT_TYPES()
 
         return deep_merge(d, {

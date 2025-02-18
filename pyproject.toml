@@ -1,7 +1,7 @@
 [project]
 name = "jovi_capture"
 description = "Capture Webcamera and URL media streams as ComfyUI images"
-version = "1.0.0"
+dynamic = ["version"]
 license = { file = "LICENSE" }
 readme = "README.md"
 authors = [{ name = "Alexander G. Morano", email = "amorano@gmail.com" }]
@@ -16,11 +16,7 @@ classifiers = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-    "aenum>=3.1.15",
-    "loguru",
-    "numpy>=1.26.4,<2.0.0; python_version < '3.12'",
-    "numpy>=2.0.0; python_version > '3.11'",
-    "opencv-contrib-python"
+    "git+https://github.com/cozy-comfyui/cozy_comfyui@main#egg=cozy_comfyui"
 ]
 
 [project.urls]
@@ -28,6 +24,14 @@ Homepage = "https://github.com/Amorano/Jovi_Capture"
 Documentation = "https://github.com/Amorano/Jovi_Capture/wiki"
 Repository = "https://github.com/Amorano/Jovi_Capture"
 Issues = "https://github.com/Amorano/Jovi_Capture/issues"
+
+[tool.setuptools.dynamic]
+version = {attr = "core.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["core*"]
+namespaces = false
 
 [tool.comfy]
 PublisherId = "amorano"

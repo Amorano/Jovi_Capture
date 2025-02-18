@@ -16,28 +16,40 @@ from loguru import logger
 
 class MediaStreamBase:
 
-    def __init__(self, fps:float=30, timeout:int=5) -> None:
+    def __init__(self, fps:float=30, timeout:float=5) -> None:
         self.__fps = fps
-        self.__timeout = timeout
+        self.__timeout = min(30, max(0.5, timeout))
         self.__running = True
         self.__quit = False
         self.__frame = None
         self.__source = None
         self.__url = None
+        self.__height = 0
+        self.__width = 0
         self.__thread = threading.Thread(target=self.__run, daemon=True)
         self.__thread.start()
 
     def __run(self) -> None:
         while not self.__quit:
+            start_time = time.perf_counter()
             if not self.__source or not self.__source.isOpened():
                 logger.error("waiting on device")
-                time.sleep(1)
+                time.sleep(0.5)
+                if time.perf_counter() - start_time > self.__timeout:
+                    logger.error("could not capture device")
+                    self.__quit = True
                 continue
 
             delta = 1. / self.__fps
-            start_time = time.perf_counter()
             if self.__running:
-                ret, frame = self.__source.read()
+                while True:
+                    ret, frame = self.__source.read()
+                    if ret and frame is not None and frame.sum() > 0:
+                        break
+                    if time.perf_counter() - start_time > self.__timeout:
+                        logger.error("could not capture frame")
+                        self.__quit = True
+                        break
                 self.__frame = frame
                 """
                 if not ret:
@@ -110,12 +122,31 @@ class MediaStreamBase:
     @property
     def running(self) -> bool:
         return self.__running
-    """
+
     @property
-    def timeout(self) -> int:
+    def timeout(self) -> float:
         return self.__timeout
 
     @timeout.setter
-    def timeout(self, timeout: int) -> None:
+    def timeout(self, timeout: float) -> None:
         self.__timeout = min(30, max(1, timeout))
-    """
+
+    @property
+    def width(self) -> int:
+        return self.__width
+
+    @width.setter
+    def width(self, width:int) -> None:
+        if self.__source is not None:
+            self.__width = max(1, width)
+            self.__source.set(cv2.CAP_PROP_FRAME_WIDTH, self.__width)
+
+    @property
+    def height(self) -> int:
+        return self.__height
+
+    @height.setter
+    def height(self, height:int) -> None:
+        if self.__source is not None:
+            self.__height = max(1, height)
+            self.__source.set(cv2.CAP_PROP_FRAME_HEIGHT, self.__height)

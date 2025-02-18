@@ -4,30 +4,33 @@ Capture -- WEBCAM, REMOTE URLS
 """
 
 import time
-from typing import Tuple
+from typing import List, Tuple
 
 import cv2
 import torch
 import numpy as np
-
 from loguru import logger
 
 from comfy.utils import ProgressBar
 
-from . import \
-    JOV_SCAN_DEVICES, \
-    EnumConvertType, StreamNodeHeader, \
+from cozy_comfyui import \
+    EnumConvertType, \
     deep_merge, parse_param
 
-from .support.stream import MediaStreamBase
-from .support.image import cv2tensor_full
+from cozy_comfyui.image.convert import cv_to_tensor_full
+
+from . import \
+    JOV_SCAN_DEVICES, \
+    StreamNodeHeader
+
+from .stream import MediaStreamBase
 
 # ==============================================================================
 # === SUPPORT ===
 # ==============================================================================
 
-def cameraList() -> list:
-    camera_list = {}
+def cameraList() -> List[str]:
+    camera_list = []
     if not JOV_SCAN_DEVICES:
         return camera_list
     failed = 0
@@ -35,11 +38,10 @@ def cameraList() -> list:
     while failed < 2:
         cap = cv2.VideoCapture(idx)
         if cap.isOpened():
-            camera_list[idx] = {
-                'w': int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
-                'h': int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
-                'fps': int(cap.get(cv2.CAP_PROP_FPS))
-            }
+            w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            f = int(cap.get(cv2.CAP_PROP_FPS))
+            camera_list.append(f"{idx} - {w}x{h}x{f}")
             cap.release()
         else:
             failed += 1
@@ -59,6 +61,7 @@ class MediaStreamCamera(MediaStreamBase):
         self.__flip: bool = False
         super().__init__(fps=fps)
 
+    @property
     def frame(self):
         frame = super().frame
         try:
@@ -130,8 +133,9 @@ Capture frames from a web camera. Supports batch processing, allowing multiple f
         d = super().INPUT_TYPES()
 
         if cls.CAMERAS is None:
-            cls.CAMERAS = [f"{i} - {v['w']}x{v['h']}" for i, v in enumerate(cameraList().values())]
-        camera_default = cls.CAMERAS[0] if len(cls.CAMERAS) else "NONE"
+            cameras = cameraList()
+            cls.CAMERAS = cameras if len(cameras) else ["NONE"]
+        camera_default = cls.CAMERAS[0]
 
         return deep_merge({
             "optional": {
@@ -139,15 +143,30 @@ Capture frames from a web camera. Supports batch processing, allowing multiple f
                 "FLIP": ("BOOLEAN", {"default": False, "tooltip": "Camera flip image left-to-right"}),
                 "ZOOM": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1, "tooltip": "Camera zoom"}),
                 "FOCUS": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1, "tooltip": "Camera focus"}),
-                "EXPOSURE": ("INT", {"default": 50, "min": 0, "max": 100, "step": 1, "tooltip": "Camera exsposure"}),
+                "EXPOSURE": ("INT", {"default": 50, "min": 0, "max": 100, "step": 1, "tooltip": "Camera exposure"})
             }
         }, d)
 
-    def __init__(self, *arg, **kw) -> None:
-        super().__init__(*arg, **kw)
-        self.device = MediaStreamCamera()
-
     def run(self, **kw) -> Tuple[torch.Tensor, ...]:
+        # need to see if we have a device...
+        url = parse_param(kw, "CAMERA", EnumConvertType.STRING, "")[0]
+        url = "0"
+        try:
+            url = int(url.split('-')[0].strip())
+        except Exception:
+            logger.warning(f"bad camera url {url}")
+            return self.empty
+
+        if self.device is None:
+            self.device = MediaStreamCamera()
+
+        self.device.timeout = parse_param(kw, "TIMEOUT", EnumConvertType.INT, 5, 1, 30)[0]
+        self.device.url = url
+
+        #wh = parse_param(kw, "WH", EnumConvertType.VEC2INT, [640, 480], 160)[0]
+        #self.device.width = wh[0]
+        #self.device.height = wh[1]
+
         images = []
         self.device.fps = parse_param(kw, "FPS", EnumConvertType.INT, 30)[0]
         batch_size = parse_param(kw, "BATCH", EnumConvertType.INT, 1, 1)[0]
@@ -155,10 +174,7 @@ Capture frames from a web camera. Supports batch processing, allowing multiple f
             self.device.pause()
         else:
             self.device.play()
-        #self.device.timeout = parse_param(kw, "TIMEOUT", EnumConvertType.INT, 5, 1, 30)[0]
-        url = parse_param(kw, "CAMERA", EnumConvertType.STRING, "")[0]
-        self.device.url = int(url.split('-')[0].strip())
-        # is in milliseconds
+
         self.device.flip = parse_param(kw, "FLIP", EnumConvertType.BOOLEAN, False)[0]
         self.device.zoom = parse_param(kw, "ZOOM", EnumConvertType.INT, 0, 0, 100)[0] / 100.
         self.device.focus = parse_param(kw, "FOCUS", EnumConvertType.INT, 0, 0, 100)[0] / 100.
@@ -167,16 +183,17 @@ Capture frames from a web camera. Supports batch processing, allowing multiple f
         rate = 1. / self.device.fps
         pbar = ProgressBar(batch_size)
         for idx in range(batch_size):
-            if (img := self.device.frame()) is None:
-                images.append(self.empty)
-            else:
-                images.append(cv2tensor_full(img))
+            start_time = time.perf_counter()
+            while True:
+                if not (img := self.device.frame) is None and img.sum() > 0:
+                    break
+                if time.perf_counter() - start_time > self.device.timeout:
+                    logger.error("could not capture device")
+                    return self.empty
+
+            images.append(cv_to_tensor_full(img))
             if batch_size > 1:
                 time.sleep(rate)
             pbar.update_absolute(idx)
-
-        if len(images) == 0:
-            logger.error("no images captured")
-            return self.empty
 
         return [torch.stack(i) for i in zip(*images)]

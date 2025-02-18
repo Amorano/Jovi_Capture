@@ -13,11 +13,14 @@ from loguru import logger
 
 from comfy.utils import ProgressBar
 
-from . import \
-    EnumConvertType, StreamNodeHeader, \
+from cozy_comfyui import \
+    MIN_IMAGE_SIZE, \
+    EnumConvertType, \
     deep_merge, parse_param
 
-from .support.image import cv2tensor_full
+from cozy_comfyui.image import cv_to_tensor_full
+
+from . import StreamNodeHeader
 
 # ==============================================================================
 # === NODE ===
@@ -85,7 +88,7 @@ Capture frames from a desktop monitor. Supports batch processing, allowing multi
                     images.append(self.__empty)
                 else:
                     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGRA)
-                    images.append(cv2tensor_full(img))
+                    images.append(cv_to_tensor_full(img))
                 pbar.update_absolute(idx)
                 if batch_size > 1:
                     time.sleep(rate)

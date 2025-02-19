@@ -3,7 +3,6 @@ Jovi_Capture - http://www.github.com/amorano/Jovi_Capture
 Capture -- WEBCAM, REMOTE URLS
 """
 
-import json
 import os
 import time
 from typing import Any, Dict, List, Tuple
@@ -24,7 +23,7 @@ from cozy_comfyui import \
 
 from cozy_comfyui.image.convert import cv_to_tensor_full
 
-from . import StreamNodeHeader
+from . import VideoStreamNodeHeader
 from .. import PACKAGE
 from .stream import MediaStreamBase
 
@@ -53,6 +52,7 @@ def cameraList() -> List[str]:
         else:
             failed += 1
         idx += 1
+
     if len(cameraList) == 0:
         cameraList = ["NONE"]
     return cameraList
@@ -64,8 +64,8 @@ def cameraList() -> List[str]:
 @PromptServer.instance.routes.get(f"/{PACKAGE.lower()}/camera")
 async def route_cameraList(req) -> Any:
     # load the camera list here..
-    data = cameraList()
-    return web.json_response(data)
+    CameraStreamReader.CAMERAS = cameraList()
+    return web.json_response(CameraStreamReader.CAMERAS)
 
 # ==============================================================================
 # === CLASS ===
@@ -136,7 +136,7 @@ class MediaStreamCamera(MediaStreamBase):
         val = 255 * self.__focus
         self.source.set(cv2.CAP_PROP_FOCUS, val)
 
-class CameraStreamReader(StreamNodeHeader):
+class CameraStreamReader(VideoStreamNodeHeader):
     NAME = "CAMERA"
     DESCRIPTION = """
 Capture frames from a web camera. Supports batch processing, allowing multiple frames to be captured simultaneously. The node provides options for configuring the source, resolution, frame rate, zoom, orientation, and interpolation method. Additionally, it supports capturing frames from multiple monitors or windows simultaneously.
@@ -144,7 +144,8 @@ Capture frames from a web camera. Supports batch processing, allowing multiple f
     CAMERAS = None
 
     @classmethod
-    def INPUT_TYPES(cls) -> Dict[str, str]:
+    # Dict[str, Dict[str, Tuple[str, Dict[str, Any]]]]:
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
         d = super().INPUT_TYPES()
 
         if cls.CAMERAS is None:
@@ -163,7 +164,6 @@ Capture frames from a web camera. Supports batch processing, allowing multiple f
     def run(self, **kw) -> Tuple[torch.Tensor, ...]:
         # need to see if we have a device...
         url = parse_param(kw, "CAMERA", EnumConvertType.STRING, "")[0]
-        url = "0"
         try:
             url = int(url.split('-')[0].strip())
         except Exception:

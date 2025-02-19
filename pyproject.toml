@@ -17,7 +17,12 @@ classifiers = [
 requires-python = ">=3.11"
 dependencies = [
     "aiohttp",
-    "git+https://github.com/cozy-comfyui/cozy_comfyui@main#egg=cozy_comfyui"
+    "git+https://github.com/cozy-comfyui/cozy_comfyui@main#egg=cozy_comfyui",
+    "mss",
+    "numpy>=1.26.4,<2.0.0; python_version <= '3.11'",
+    "numpy>=2.0.0; python_version >= '3.12'",
+    "opencv-contrib-python",
+    "Pillow"
 ]
 
 [project.urls]

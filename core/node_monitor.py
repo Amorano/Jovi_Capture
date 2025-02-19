@@ -4,95 +4,129 @@ Monitor -- Capture Monitor
 """
 
 import time
-from typing import Tuple, Dict
+from typing import Dict
 
 import cv2
+import mss
 import torch
-
+import numpy as np
+from PIL import ImageGrab
 from loguru import logger
 
 from comfy.utils import ProgressBar
 
 from cozy_comfyui import \
-    EnumConvertType, \
-    deep_merge, parse_param
-
+    RGBAMaskType, EnumConvertType, \
+    deep_merge, parse_param, zip_longest_fill
+from cozy_comfyui.image import ImageType
 from cozy_comfyui.image.convert import cv_to_tensor_full
 
 from . import StreamNodeHeader
+
+# ==============================================================================
+# === CONSTANT ===
+# ==============================================================================
+
+JOV_DOCKERENV = False
+try:
+    with open('/proc/1/cgroup', 'rt') as f:
+        content = f.read()
+        JOV_DOCKERENV = any(x in content for x in ['docker', 'kubepods', 'containerd'])
+except FileNotFoundError:
+    pass
+
+if JOV_DOCKERENV:
+    logger.info("RUNNING IN A DOCKER")
+
+# ==============================================================================
+# === SUPPORT ===
+# ==============================================================================
+
+def monitor_capture_all(width:int=None, height:int=None) -> ImageType:
+    if JOV_DOCKERENV:
+        return None
+
+    img = ImageGrab.grab(all_screens=True)
+    img = np.array(img, dtype='uint8')
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    if height is not None and width is not None:
+        return cv2.resize(img, (width, height))
+    return img
 
 # ==============================================================================
 # === NODE ===
 # ==============================================================================
 
 class MonitorStreamReader(StreamNodeHeader):
-    NAME = "DESKTOP"
-    CAMERAS = None
+    NAME = "MONITOR"
     DESCRIPTION = """
 Capture frames from a desktop monitor. Supports batch processing, allowing multiple frames to be captured simultaneously. The node provides options for configuring the source, resolution, frame rate, zoom, orientation, and interpolation method. Additionally, it supports capturing frames from multiple monitors or windows simultaneously.
 """
+    MONITOR = None
 
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, str]:
-        d = super().INPUT_TYPES()
+        if not JOV_DOCKERENV:
+            cls.MONITOR = []
+            with mss.mss() as screen:
+                for i, m in enumerate(screen.monitors):
+                    cls.MONITOR.append(f"{i}-{m['width']}x{m['height']}")
 
+        if cls.MONITOR is None or len(cls.MONITOR) == 0:
+            cls.MONITOR = ["NONE"]
+
+        d = super().INPUT_TYPES()
         return deep_merge({
             "optional": {
-
+                "MONITOR": (cls.MONITOR, {"default": cls.MONITOR[0], "choice": "list of system monitor devices", "tooltip": "list of system monitor devices"}),
+                "XY": ("VEC2INT", {"default": (0, 0), "mij": 0, "label": ["TOP", "LEFT"], "tooltip": "Top, Left position"}),
+                "WH": ("VEC2INT", {"default": (0, 0), "mij": 0, "label": ["WIDTH", "HEIGHT"], "tooltip": "Width and Height"})
             }
         }, d)
 
-    def __init__(self, *arg, **kw) -> None:
-        super().__init__(*arg, **kw)
-        self.__device = None
+    def run(self, **kw) -> RGBAMaskType:
 
-    def run(self, **kw) -> Tuple[torch.Tensor, torch.Tensor]:
-        wait = parse_param(kw, "WAIT", EnumConvertType.BOOLEAN, False)[0]
-        if wait:
-            return self.__last
-        images = []
-        batch_size, rate = parse_param(kw, "BATCH", EnumConvertType.VEC2INT, [(1, 30)], 1)[0]
-        pbar = ProgressBar(batch_size)
-        rate = 1. / rate
+        if JOV_DOCKERENV:
+            return self.empty
 
-        camera = parse_param(kw, "CAMERA", EnumConvertType.STRING, "")[0]
-        camera = camera.split('-')[0].strip()
+        # only allow monitor to capture single one per "batch"
+        monitor = parse_param(kw, "MONITOR", EnumConvertType.STRING, "NONE")[0]
         try:
-            _ = int(camera)
-            camera = str(camera)
-        except:
-            camera = ""
+            monitor = int(monitor.split('-')[0].strip())
+        except Exception:
+            logger.warning(f"bad monitor {monitor}")
+            return self.empty
 
-        # timeout and try again?
-        if self.__capturing > 0 and time.perf_counter() - self.__capturing > 3000:
-            logger.error(f'timed out {self.__url}')
-            self.__capturing = 0
-            self.__url = ""
+        images = []
+        batch_size = parse_param(kw, "BATCH", EnumConvertType.INT, 1, 1)[0]
 
-        if self.__device is not None:
-            self.__capturing = 0
+        # allow these to "flex" length so as to animate
+        fps = parse_param(kw, "FPS", EnumConvertType.INT, 30)
+        xy = parse_param(kw, "XY", EnumConvertType.VEC2INT, [(0,0)], 0)
+        wh = parse_param(kw, "WH", EnumConvertType.VEC2INT, [(0,0)], 0)
 
-            if wait:
-                self.__device.pause()
-            else:
-                self.__device.play()
-
-            fps = parse_param(kw, "FPS", EnumConvertType.INT, 30)[0]
-            self.__device.fps = fps
-            self.__device.zoom = parse_param(kw, "ZOOM", EnumConvertType.FLOAT, 0, 0, 1)[0]
-
-            for idx in range(batch_size):
-                img = self.__device.frame
-                if img is None:
-                    images.append(self.__empty)
-                else:
-                    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGRA)
-                    images.append(cv_to_tensor_full(img))
+        pbar = ProgressBar(batch_size)
+        batch_size = [batch_size] * batch_size
+        params = list(zip_longest_fill(fps, xy, wh, batch_size))
+        with mss.mss() as screen:
+            for idx, (fps, xy, wh, batch_size) in enumerate(params):
+                rate = 1. / fps
+                capture = screen.monitors[monitor]
+                width = capture['width']
+                height = capture['height']
+                width  = width  if wh[0] == 0 else np.clip(wh[0], 1, width)
+                height = height if wh[1] == 0 else np.clip(wh[1], 1, height)
+                region = {
+                    'top': capture['top'] + xy[1],
+                    'left': capture['left'] + xy[0],
+                    'width': width,
+                    'height': height
+                }
+                img = screen.grab(region)
+                img = cv2.cvtColor(np.array(img, dtype=np.uint8), cv2.COLOR_RGB2BGR)
+                images.append(cv_to_tensor_full(img))
                 pbar.update_absolute(idx)
                 if batch_size > 1:
                     time.sleep(rate)
 
-        if len(images) == 0:
-            images.append(self.__empty)
-        self.__last = [torch.stack(i) for i in zip(*images)]
-        return self.__last
+        return [torch.stack(i) for i in zip(*images)]

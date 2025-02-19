@@ -1,12 +1,44 @@
 /**
  * File: util_jov.js
- * Project: Jovi_GLSL
+ * Project: Jovi_Capture
  *
  */
 
 import { app } from "../../scripts/app.js"
+import { api } from "../../scripts/api.js"
 
 export const CONVERTED_TYPE = "converted-widget"
+
+/* `/jovimetrix/${route}` */
+
+export async function api_post(route, id, cmd) {
+    try {
+        const response = await api.fetchApi(route, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                id: id,
+                cmd: cmd
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error: ${response.status} - ${response.statusText}`);
+        }
+        return response;
+
+    } catch (error) {
+        console.error("API call failed:", error);
+        throw error;
+    }
+}
+
+export async function api_get(route) {
+    var response = await api.fetchApi(route, { cache: "no-store" });
+    return await response.json()
+}
 
 function widgetHide(node, widget, suffix = '') {
     if ((widget?.hidden || false) || widget.type?.startsWith(CONVERTED_TYPE + suffix)) {

@@ -30,6 +30,24 @@ class StreamNodeHeader(CozyImageNode):
                                 "tooltip": "Framerate to attempt when capturing"}),
                 "BATCH": ("INT", {"default": 1, "min": 1,
                                   "tooltip": "Number of frames wanted at the Framerate in FPS"}),
+            }
+        })
+
+    def __init__(self, *arg, **kw) -> None:
+        super().__init__(*arg, **kw)
+        self.empty = [
+            torch.zeros((1, MIN_IMAGE_SIZE, MIN_IMAGE_SIZE, 4), dtype=torch.uint8, device="cpu"),
+            torch.zeros((1, MIN_IMAGE_SIZE, MIN_IMAGE_SIZE, 3), dtype=torch.uint8, device="cpu"),
+            torch.zeros((1, MIN_IMAGE_SIZE, MIN_IMAGE_SIZE, 1), dtype=torch.uint8, device="cpu")
+        ]
+
+class VideoStreamNodeHeader(StreamNodeHeader):
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, str]:
+        d = super().INPUT_TYPES()
+
+        return deep_merge(d, {
+            "optional": {
                 "PAUSE": ("BOOLEAN", {"default": False,
                                       "tooltip": "If the stream should hold (pause) it's frame capture"}),
                 "TIMEOUT": ("INT", {"default": 5, "min": 5, "max": 30, "step": 1,
@@ -40,8 +58,3 @@ class StreamNodeHeader(CozyImageNode):
     def __init__(self, *arg, **kw) -> None:
         super().__init__(*arg, **kw)
         self.device = None
-        self.empty = [
-            torch.zeros((1, MIN_IMAGE_SIZE, MIN_IMAGE_SIZE, 4), dtype=torch.uint8, device="cpu"),
-            torch.zeros((1, MIN_IMAGE_SIZE, MIN_IMAGE_SIZE, 3), dtype=torch.uint8, device="cpu"),
-            torch.zeros((1, MIN_IMAGE_SIZE, MIN_IMAGE_SIZE, 1), dtype=torch.uint8, device="cpu")
-        ]

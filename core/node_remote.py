@@ -18,7 +18,7 @@ from cozy_comfyui import \
 
 from cozy_comfyui.image.convert import cv_to_tensor_full
 
-from . import StreamNodeHeader #MediaStreamBase
+from . import StreamNodeHeader
 
 # ==============================================================================
 # === NODE ===

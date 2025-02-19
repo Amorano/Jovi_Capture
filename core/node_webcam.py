@@ -3,16 +3,20 @@ Jovi_Capture - http://www.github.com/amorano/Jovi_Capture
 Capture -- WEBCAM, REMOTE URLS
 """
 
+import json
 import os
 import time
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
+
 
 import cv2
 import torch
 import numpy as np
+from aiohttp import web
 from loguru import logger
 
 from comfy.utils import ProgressBar
+from server import PromptServer
 
 from cozy_comfyui import \
     EnumConvertType, \
@@ -20,9 +24,8 @@ from cozy_comfyui import \
 
 from cozy_comfyui.image.convert import cv_to_tensor_full
 
-from . import \
-    StreamNodeHeader
-
+from . import StreamNodeHeader
+from .. import PACKAGE
 from .stream import MediaStreamBase
 
 # ==============================================================================
@@ -36,26 +39,36 @@ JOV_SCAN_DEVICES = os.getenv("JOV_SCAN_DEVICES", "False").lower() in ['1', 'true
 # ==============================================================================
 
 def cameraList() -> List[str]:
-    camera_list = []
-    if not JOV_SCAN_DEVICES:
-        return camera_list
-    failed = 0
     idx = 0
+    failed = 0
+    cameraList = []
     while failed < 2:
         cap = cv2.VideoCapture(idx)
         if cap.isOpened():
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             f = int(cap.get(cv2.CAP_PROP_FPS))
-            camera_list.append(f"{idx} - {w}x{h}x{f}")
+            cameraList.append(f"{idx} - {w}x{h}x{f}")
             cap.release()
         else:
             failed += 1
         idx += 1
-    return camera_list
+    if len(cameraList) == 0:
+        cameraList = ["NONE"]
+    return cameraList
 
 # ==============================================================================
-# === SUPPORT - CLASS ===
+# === API ROUTE ===
+# ==============================================================================
+
+@PromptServer.instance.routes.get(f"/{PACKAGE.lower()}/camera")
+async def route_cameraList(req) -> Any:
+    # load the camera list here..
+    data = cameraList()
+    return web.json_response(data)
+
+# ==============================================================================
+# === CLASS ===
 # ==============================================================================
 
 class MediaStreamCamera(MediaStreamBase):
@@ -123,44 +136,23 @@ class MediaStreamCamera(MediaStreamBase):
         val = 255 * self.__focus
         self.source.set(cv2.CAP_PROP_FOCUS, val)
 
-# ==============================================================================
-# === NODE ===
-# ==============================================================================
-
 class CameraStreamReader(StreamNodeHeader):
     NAME = "CAMERA"
     DESCRIPTION = """
 Capture frames from a web camera. Supports batch processing, allowing multiple frames to be captured simultaneously. The node provides options for configuring the source, resolution, frame rate, zoom, orientation, and interpolation method. Additionally, it supports capturing frames from multiple monitors or windows simultaneously.
 """
-
-    @classmethod
-    def CAMERA_LIST(cls) -> List[str]:
-        cls.CAMERAS = ["NONE"]
-        if not JOV_SCAN_DEVICES:
-            return cls.CAMERAS
-
-        failed = 0
-        idx = 0
-        while failed < 2:
-            cap = cv2.VideoCapture(idx)
-            if cap.isOpened():
-                w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                f = int(cap.get(cv2.CAP_PROP_FPS))
-                cls.CAMERAS.append(f"{idx} - {w}x{h}x{f}")
-                cap.release()
-            else:
-                failed += 1
-            idx += 1
-        return cls.CAMERAS
+    CAMERAS = None
 
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, str]:
         d = super().INPUT_TYPES()
 
+        if cls.CAMERAS is None:
+            cls.CAMERAS = cameraList() if JOV_SCAN_DEVICES else ["NONE"]
+
         return deep_merge({
             "optional": {
-                "CAMERA": (lambda: cls.CAMERA_LIST(), {"default": cls.CAMERAS[0], "tooltip": "The camera from the auto-scanned list"}),
+                "CAMERA": (cls.CAMERAS, {"default": cls.CAMERAS[0], "tooltip": "The camera from the auto-scanned list"}),
                 "FLIP": ("BOOLEAN", {"default": False, "tooltip": "Camera flip image left-to-right"}),
                 "ZOOM": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1, "tooltip": "Camera zoom"}),
                 "FOCUS": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1, "tooltip": "Camera focus"}),

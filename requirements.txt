@@ -1,1 +1,2 @@
+aiohttp
 git+https://github.com/cozy-comfyui/cozy_comfyui@main#egg=cozy_comfyui

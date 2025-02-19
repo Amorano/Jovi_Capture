@@ -14,7 +14,6 @@ from loguru import logger
 from comfy.utils import ProgressBar
 
 from cozy_comfyui import \
-    MIN_IMAGE_SIZE, \
     EnumConvertType, \
     deep_merge, parse_param
 

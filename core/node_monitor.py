@@ -112,14 +112,22 @@ Capture frames from a desktop monitor. Supports batch processing, allowing multi
                     capture = screen.monitors[monitor]
                     width = capture['width']
                     height = capture['height']
-                    width  = width  if wh[0] == 0 else np.clip(wh[0], 1, width)
-                    height = height if wh[1] == 0 else np.clip(wh[1], 1, height)
+
+                    # clip the position to be "in-bounds"
+                    left = min(width-1, xy[0])
+                    top = min(height-1, xy[1])
+
+                    width  = width  if wh[0] == 0 else int(np.clip(wh[0], 1, width))
+                    height = height if wh[1] == 0 else int(np.clip(wh[1], 1, height))
+                    width = min(width, capture['width']-left)
+                    height = min(height, capture['height']-top)
                     region = {
-                        'top': capture['top'] + xy[1],
-                        'left': capture['left'] + xy[0],
+                        'top': top + capture['top'],
+                        'left': left + capture['left'],
                         'width': width,
                         'height': height
                     }
+                    print(region)
                     img = screen.grab(region)
                     img = cv2.cvtColor(np.array(img, dtype=np.uint8), cv2.COLOR_RGB2BGR)
 

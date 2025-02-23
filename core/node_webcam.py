@@ -8,13 +8,13 @@ import cv2
 import torch
 import numpy as np
 from aiohttp import web
-from loguru import logger
 
 from comfy.utils import ProgressBar
 from server import PromptServer
 
 from cozy_comfyui import \
     EnumConvertType, \
+    logger, \
     deep_merge, parse_param
 
 from cozy_comfyui import RGBAMaskType

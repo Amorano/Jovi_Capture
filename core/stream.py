@@ -8,7 +8,8 @@ import threading
 from typing import Any
 
 import cv2
-from loguru import logger
+
+from cozy_comfyui import logger
 
 # ==============================================================================
 # === CLASS ===

@@ -8,12 +8,12 @@ from typing import Dict, Tuple
 
 import cv2
 import torch
-from loguru import logger
 
 from comfy.utils import ProgressBar
 
 from cozy_comfyui import \
     EnumConvertType, \
+    logger, \
     deep_merge, parse_param
 
 from cozy_comfyui.image.convert import cv_to_tensor_full

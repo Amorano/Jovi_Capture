@@ -8,12 +8,12 @@ import mss
 import torch
 import numpy as np
 from PIL import ImageGrab
-from loguru import logger
 
 from comfy.utils import ProgressBar
 
 from cozy_comfyui import \
     RGBAMaskType, EnumConvertType, \
+    logger, \
     deep_merge, parse_param, zip_longest_fill
 from cozy_comfyui.image import ImageType
 from cozy_comfyui.image.convert import cv_to_tensor_full

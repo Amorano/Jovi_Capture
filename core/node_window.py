@@ -6,19 +6,17 @@ import time
 import platform
 from typing import Any, Dict, Optional, Tuple
 
-import cv2
 import torch
 import numpy as np
 import pywinctl as pwc
 from aiohttp import web
-
-from loguru import logger
 
 from comfy.utils import ProgressBar
 from server import PromptServer
 
 from cozy_comfyui import \
     EnumConvertType, \
+    logger, \
     deep_merge, parse_param, zip_longest_fill
 
 from cozy_comfyui import RGBAMaskType
@@ -28,6 +26,7 @@ from cozy_comfyui.image.convert import cv_to_tensor_full
 if platform.system() == "Windows":
     import win32gui
     import win32ui
+    import win32con
     from ctypes import windll
 elif platform.system() == "Darwin":
     from Quartz import *
@@ -83,54 +82,73 @@ def window_capture(hwnd: int, client_area_only: bool=False, region: Optional[Tup
         ImageType: Captured image in RGBA format
     """
     system = platform.system()
-
     if system == "Windows":
+        dc = None
+        compatible_dc = None
+        bitmap = None
+        window_dc = None
+
         # Get correct window rect based on capture mode
         if client_area_only:
             rect = win32gui.GetClientRect(hwnd)
             left, top = win32gui.ClientToScreen(hwnd, (0, 0))
-            right = left + rect[2]
-            bottom = top + rect[3]
+            max_width = rect[2]
+            max_height = rect[3]
         else:
             left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+            max_width = right - left
+            max_height = bottom - top
 
-        width = right - left
-        height = bottom - top
+        if region is None:
+            x, y = 0, 0
+            width, height = max_width, max_height
+        else:
+            rl, rt, rw, rh = region
+            x = min(max(0, rl), max_width - 1)
+            y = min(max(0, rt), max_height - 1)
+            width  = max_width  if rw == 0 else min(rw, max_width - x)
+            height = max_height if rh == 0 else min(rh, max_height - y)
 
-        # Adjust for region if specified
-        if region:
-            rx, ry, rw, rh = region
-            left += rx
-            top += ry
-            width = min(rw, width - rx)
-            height = min(rh, height - ry)
+        logger.info(f"Capture region: pos=({x},{y}) size=({width},{height})")
 
-        window_dc = win32gui.GetWindowDC(hwnd)
-        dc = win32ui.CreateDCFromHandle(window_dc)
-        compatible_dc = dc.CreateCompatibleDC()
-
+        img = None
         try:
+            window_dc = win32gui.GetWindowDC(hwnd)
+            dc = win32ui.CreateDCFromHandle(window_dc)
+            compatible_dc = dc.CreateCompatibleDC()
             bitmap = win32ui.CreateBitmap()
             bitmap.CreateCompatibleBitmap(dc, width, height)
             compatible_dc.SelectObject(bitmap)
 
             # Set the correct source coordinates for BitBlt
-            if client_area_only or region:
-                compatible_dc.BitBlt((0, 0), (width, height), dc, (rx if region else 0, ry if region else 0), win32con.SRCCOPY)
-            else:
-                windll.user32.PrintWindow(hwnd, compatible_dc.GetSafeHdc(), 2)
+            """
+            compatible_dc.BitBlt(
+                (0, 0),
+                (width, height),
+                dc,
+                (capture_left, capture_top),
+                win32con.SRCCOPY
+            )
+            """
 
+            result = windll.user32.PrintWindow(hwnd, compatible_dc.GetSafeHdc(), 0)
+            if result is None:
+                return None
             bmpstr = bitmap.GetBitmapBits(True)
             img = np.frombuffer(bmpstr, dtype='uint8')
             img = img.reshape((height, width, 4))
-
+            img = img[y:y+height, x:x+width]
+        except Exception as e:
+            logger.error(e)
         finally:
-            dc.DeleteDC()
-            compatible_dc.DeleteDC()
-            win32gui.ReleaseDC(hwnd, window_dc)
-            win32gui.DeleteObject(bitmap.GetHandle())
-
-        return cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA)
+            if bitmap:
+                win32gui.DeleteObject(bitmap.GetHandle())
+            if compatible_dc:
+                compatible_dc.DeleteDC()
+            if dc:
+                dc.DeleteDC()
+            if window_dc:
+                win32gui.ReleaseDC(hwnd, window_dc)
 
     elif system == "Darwin":
         # Get window info
@@ -152,8 +170,12 @@ def window_capture(hwnd: int, client_area_only: bool=False, region: Optional[Tup
             rx, ry, rw, rh = region
             bounds.origin.x += rx
             bounds.origin.y += ry
-            bounds.size.width = min(rw, bounds.size.width - rx)
-            bounds.size.height = min(rh, bounds.size.height - ry)
+
+            bounds.size.width = min(rw, bounds.size.width - rx) if rw > 0 else bounds.size.width - rx
+            bounds.size.height = min(rh, bounds.size.height - ry) if rh > 0 else bounds.size.height - ry
+
+        bounds.size.width = max(1, bounds.size.width)
+        bounds.size.height = max(1, bounds.size.height)
 
         # Create image of window contents
         image = CGWindowListCreateImage(
@@ -169,7 +191,7 @@ def window_capture(hwnd: int, client_area_only: bool=False, region: Optional[Tup
         width = CGImageGetWidth(image)
         height = CGImageGetHeight(image)
         img = np.frombuffer(data, dtype=np.uint8)
-        return img.reshape((height, width, 4))
+        img = img.reshape((height, width, 4))
 
     elif system == "Linux":
         d = display.Display()
@@ -202,8 +224,11 @@ def window_capture(hwnd: int, client_area_only: bool=False, region: Optional[Tup
             rx, ry, rw, rh = region
             x += rx
             y += ry
-            width = min(rw, width - rx)
-            height = min(rh, height - ry)
+            width = min(rw, width - rx) if rw > 0 else width - rx
+            height = min(rh, height - ry) if rh > 0 else height - ry
+
+        width = max(1, width)
+        height = max(1, height)
 
         try:
             composite.composite_redirect_window(d, window, True)
@@ -222,7 +247,7 @@ def window_capture(hwnd: int, client_area_only: bool=False, region: Optional[Tup
             gc.free()
             pixmap.free()
 
-        return cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA)
+    return img
 
 # ==============================================================================
 # === API ROUTE ===
@@ -278,10 +303,15 @@ Capture frames from a dekstop window. Supports batch processing, allowing multip
         size = [batch_size] * batch_size
         params = list(zip_longest_fill(window, fps, xy, wh, client, size))
         for idx, (window, fps, xy, wh, client, size) in enumerate(params):
-            window = self.WINDOWS[window]
-            region = None
-            if (img := window_capture(window, client, region)) is None:
+            try:
+                window = self.WINDOWS[window]
+            except Exception as e:
+                logger.error(e)
                 img = self.empty
+            else:
+                region = (xy[0], xy[1], wh[0], wh[1])
+                if (img := window_capture(window, client, region)) is None:
+                    img = self.empty
 
             images.append(cv_to_tensor_full(img))
             if batch_size > 1:

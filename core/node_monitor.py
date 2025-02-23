@@ -1,7 +1,4 @@
-"""
-Jovi_Capture - http://www.github.com/amorano/Jovi_Capture
-Monitor -- Capture Monitor
-"""
+"""Capture Monitors"""
 
 import time
 from typing import Dict
@@ -87,46 +84,49 @@ Capture frames from a desktop monitor. Supports batch processing, allowing multi
     def run(self, **kw) -> RGBAMaskType:
 
         if JOV_DOCKERENV:
-            return self.empty
+            img = cv_to_tensor_full(self.empty)
+            return [torch.stack(i) for i in zip(*img)]
 
         # only allow monitor to capture single one per "batch"
-        monitor = parse_param(kw, "MONITOR", EnumConvertType.STRING, "NONE")[0]
-        try:
-            monitor = int(monitor.split('-')[0].strip())
-        except Exception:
-            logger.warning(f"bad monitor {monitor}")
-            return self.empty
-
         images = []
         batch_size = parse_param(kw, "BATCH", EnumConvertType.INT, 1, 1)[0]
 
         # allow these to "flex" length so as to animate
+        monitor = parse_param(kw, "MONITOR", EnumConvertType.STRING, "NONE")
         fps = parse_param(kw, "FPS", EnumConvertType.INT, 30)
         xy = parse_param(kw, "XY", EnumConvertType.VEC2INT, [(0,0)], 0)
         wh = parse_param(kw, "WH", EnumConvertType.VEC2INT, [(0,0)], 0)
 
         pbar = ProgressBar(batch_size)
-        batch_size = [batch_size] * batch_size
-        params = list(zip_longest_fill(fps, xy, wh, batch_size))
+        size = [batch_size] * batch_size
+        params = list(zip_longest_fill(monitor, fps, xy, wh, size))
         with mss.mss() as screen:
-            for idx, (fps, xy, wh, batch_size) in enumerate(params):
-                rate = 1. / fps
-                capture = screen.monitors[monitor]
-                width = capture['width']
-                height = capture['height']
-                width  = width  if wh[0] == 0 else np.clip(wh[0], 1, width)
-                height = height if wh[1] == 0 else np.clip(wh[1], 1, height)
-                region = {
-                    'top': capture['top'] + xy[1],
-                    'left': capture['left'] + xy[0],
-                    'width': width,
-                    'height': height
-                }
-                img = screen.grab(region)
-                img = cv2.cvtColor(np.array(img, dtype=np.uint8), cv2.COLOR_RGB2BGR)
+            for idx, (monitor, fps, xy, wh, size) in enumerate(params):
+
+                try:
+                    monitor = int(monitor.split('-')[0].strip())
+                except Exception:
+                    logger.warning(f"bad monitor {monitor}")
+                    img = self.empty
+                else:
+                    capture = screen.monitors[monitor]
+                    width = capture['width']
+                    height = capture['height']
+                    width  = width  if wh[0] == 0 else np.clip(wh[0], 1, width)
+                    height = height if wh[1] == 0 else np.clip(wh[1], 1, height)
+                    region = {
+                        'top': capture['top'] + xy[1],
+                        'left': capture['left'] + xy[0],
+                        'width': width,
+                        'height': height
+                    }
+                    img = screen.grab(region)
+                    img = cv2.cvtColor(np.array(img, dtype=np.uint8), cv2.COLOR_RGB2BGR)
+
                 images.append(cv_to_tensor_full(img))
                 pbar.update_absolute(idx)
                 if batch_size > 1:
+                    rate = 1. / fps
                     time.sleep(rate)
 
         return [torch.stack(i) for i in zip(*images)]

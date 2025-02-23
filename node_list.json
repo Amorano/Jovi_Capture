@@ -1,0 +1,6 @@
+{
+    "CAMERA (JOV_CAPTURE)": "Capture frames from a web camera",
+    "MONITOR (JOV_CAPTURE)": "Capture frames from a desktop monitor",
+    "REMOTE (JOV_CAPTURE)": "Capture frames from a URL",
+    "WINDOW (JOV_CAPTURE)": "Capture frames from a dekstop window"
+}

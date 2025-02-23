@@ -5,3 +5,6 @@ numpy>=1.26.4,<2.0.0; python_version <= '3.11'
 numpy>=2.0.0; python_version >= '3.12'
 opencv-contrib-python
 Pillow
+pyobjc-framework-Quartz; platform_system=='Darwin'
+pywin32; platform_system=='Windows'
+Xlib; platform_system=='Linux'

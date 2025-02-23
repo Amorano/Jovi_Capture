@@ -25,7 +25,7 @@ from . import StreamNodeHeader
 # ==============================================================================
 
 class RemoteSteamReader(StreamNodeHeader):
-    NAME = "REMOTE URL"
+    NAME = "REMOTE"
     DESCRIPTION = """
 Capture frames from a URL. Supports batch processing, allowing multiple frames to be captured simultaneously. The node provides options for configuring the source, resolution, frame rate, zoom, orientation, and interpolation method. Additionally, it supports capturing frames from multiple monitors or windows simultaneously.
 """

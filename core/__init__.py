@@ -7,7 +7,7 @@ __version__ = "1.0.0"
 
 from typing import Dict
 
-import torch
+import numpy as np
 
 from cozy_comfyui.node import CozyImageNode
 from cozy_comfyui import \
@@ -35,11 +35,7 @@ class StreamNodeHeader(CozyImageNode):
 
     def __init__(self, *arg, **kw) -> None:
         super().__init__(*arg, **kw)
-        self.empty = [
-            torch.zeros((1, MIN_IMAGE_SIZE, MIN_IMAGE_SIZE, 4), dtype=torch.uint8, device="cpu"),
-            torch.zeros((1, MIN_IMAGE_SIZE, MIN_IMAGE_SIZE, 3), dtype=torch.uint8, device="cpu"),
-            torch.zeros((1, MIN_IMAGE_SIZE, MIN_IMAGE_SIZE, 1), dtype=torch.uint8, device="cpu")
-        ]
+        self.empty = np.zeros((MIN_IMAGE_SIZE, MIN_IMAGE_SIZE, 4), dtype=np.uint8)
 
 class VideoStreamNodeHeader(StreamNodeHeader):
     @classmethod

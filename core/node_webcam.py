@@ -1,12 +1,8 @@
-"""
-Jovi_Capture - http://www.github.com/amorano/Jovi_Capture
-Capture -- WEBCAM, REMOTE URLS
-"""
+"""Capture -- WEBCAM"""
 
 import os
 import time
-from typing import Any, Dict, List, Tuple
-
+from typing import Any, Dict, List
 
 import cv2
 import torch
@@ -21,6 +17,7 @@ from cozy_comfyui import \
     EnumConvertType, \
     deep_merge, parse_param
 
+from cozy_comfyui import RGBAMaskType
 from cozy_comfyui.image.convert import cv_to_tensor_full
 
 from . import VideoStreamNodeHeader
@@ -37,25 +34,25 @@ JOV_SCAN_DEVICES = os.getenv("JOV_SCAN_DEVICES", "False").lower() in ['1', 'true
 # === SUPPORT ===
 # ==============================================================================
 
-def cameraList() -> List[str]:
+def camera_list() -> List[str]:
     idx = 0
     failed = 0
-    cameraList = []
+    camera_list = []
     while failed < 2:
         cap = cv2.VideoCapture(idx)
         if cap.isOpened():
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             f = int(cap.get(cv2.CAP_PROP_FPS))
-            cameraList.append(f"{idx} - {w}x{h}x{f}")
+            camera_list.append(f"{idx} - {w}x{h}x{f}")
             cap.release()
         else:
             failed += 1
         idx += 1
 
-    if len(cameraList) == 0:
-        cameraList = ["NONE"]
-    return cameraList
+    if len(camera_list) == 0:
+        camera_list = ["NONE"]
+    return camera_list
 
 # ==============================================================================
 # === API ROUTE ===
@@ -64,7 +61,7 @@ def cameraList() -> List[str]:
 @PromptServer.instance.routes.get(f"/{PACKAGE.lower()}/camera")
 async def route_cameraList(req) -> Any:
     # load the camera list here..
-    CameraStreamReader.CAMERAS = cameraList()
+    CameraStreamReader.CAMERAS = camera_list()
     return web.json_response(CameraStreamReader.CAMERAS)
 
 # ==============================================================================
@@ -149,7 +146,7 @@ Capture frames from a web camera. Supports batch processing, allowing multiple f
         d = super().INPUT_TYPES()
 
         if cls.CAMERAS is None:
-            cls.CAMERAS = cameraList() if JOV_SCAN_DEVICES else ["NONE"]
+            cls.CAMERAS = camera_list() if JOV_SCAN_DEVICES else ["NONE"]
 
         return deep_merge({
             "optional": {
@@ -161,24 +158,21 @@ Capture frames from a web camera. Supports batch processing, allowing multiple f
             }
         }, d)
 
-    def run(self, **kw) -> Tuple[torch.Tensor, ...]:
+    def run(self, **kw) -> RGBAMaskType:
         # need to see if we have a device...
         url = parse_param(kw, "CAMERA", EnumConvertType.STRING, "")[0]
         try:
             url = int(url.split('-')[0].strip())
         except Exception:
             logger.warning(f"bad camera url {url}")
-            return self.empty
+            img = cv_to_tensor_full(self.empty)
+            return [torch.stack(i) for i in zip(*img)]
 
         if self.device is None:
             self.device = MediaStreamCamera()
 
         self.device.timeout = parse_param(kw, "TIMEOUT", EnumConvertType.INT, 5, 1, 30)[0]
         self.device.url = url
-
-        #wh = parse_param(kw, "WH", EnumConvertType.VEC2INT, [640, 480], 160)[0]
-        #self.device.width = wh[0]
-        #self.device.height = wh[1]
 
         images = []
         self.device.fps = parse_param(kw, "FPS", EnumConvertType.INT, 30)[0]
@@ -202,7 +196,8 @@ Capture frames from a web camera. Supports batch processing, allowing multiple f
                     break
                 if time.perf_counter() - start_time > self.device.timeout:
                     logger.error("could not capture device")
-                    return self.empty
+                    img = self.empty
+                    break
 
             images.append(cv_to_tensor_full(img))
             if batch_size > 1:

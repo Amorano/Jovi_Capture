@@ -1,0 +1,27 @@
+{
+    "full": [
+        "",
+        "Address band toolbar",
+        "Calculator",
+        "Chrome Legacy Window",
+        "FolderView",
+        "Microsoft Text Input Application",
+        "Namespace Tree Control",
+        "Navigation buttons",
+        "Program Manager",
+        "Ribbon",
+        "Running applications",
+        "Settings",
+        "Shellview",
+        "Start",
+        "Tree View",
+        "UIRibbonDockTop",
+        "Up band toolbar",
+        "User Promoted Notification Area"
+    ],
+    "regex": [
+        "System Clock,.*",
+        "Action Center,.*",
+        "Address:.*"
+    ]
+}

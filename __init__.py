@@ -22,7 +22,8 @@ from cozy_comfyui.node import loader
 
 PACKAGE = "JOV_CAPTURE"
 WEB_DIRECTORY = "./web"
-NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS = loader(Path(__file__).resolve().parent,
+ROOT = Path(__file__).resolve().parent
+NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS = loader(ROOT,
                                                          PACKAGE,
                                                          "core",
                                                          f"{PACKAGE} 📸")

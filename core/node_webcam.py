@@ -15,7 +15,7 @@ from server import PromptServer
 from cozy_comfyui import \
     EnumConvertType, \
     logger, \
-    deep_merge, parse_param
+    deep_merge, parse_param, zip_longest_fill
 
 from cozy_comfyui import RGBAMaskType
 from cozy_comfyui.image.convert import cv_to_tensor_full
@@ -38,7 +38,7 @@ def camera_list() -> List[str]:
     idx = 0
     failed = 0
     camera_list = []
-    while failed < 2:
+    while failed < 1:
         cap = cv2.VideoCapture(idx)
         if cap.isOpened():
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -60,9 +60,11 @@ def camera_list() -> List[str]:
 
 @PromptServer.instance.routes.get(f"/{PACKAGE.lower()}/camera")
 async def route_cameraList(req) -> Any:
-    # load the camera list here..
+    force = req.query_string == "force=true"
+    if force and not JOV_SCAN_DEVICES:
+        return web.json_response(["NONE"])
     CameraStreamReader.CAMERAS = camera_list()
-    return web.json_response(CameraStreamReader.CAMERAS)
+    return web.json_response(CameraStreamReader.CAMERAS, content_type='application/json')
 
 # ==============================================================================
 # === CLASS ===
@@ -74,27 +76,7 @@ class MediaStreamCamera(MediaStreamBase):
         self.__focus = 0
         self.__exposure = 1
         self.__zoom = 0
-        self.__flip: bool = False
         super().__init__(fps=fps)
-
-    @property
-    def frame(self):
-        frame = super().frame
-        try:
-            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGRA)
-            if self.__flip:
-                frame = cv2.flip(frame, 1)
-        except:
-            pass
-        return frame
-
-    @property
-    def flip(self) -> bool:
-        return self.__flip
-
-    @flip.setter
-    def flip(self, flip: bool) -> None:
-        self.__flip = flip
 
     @property
     def zoom(self) -> float:
@@ -146,12 +128,11 @@ Capture frames from a web camera. Supports batch processing, allowing multiple f
         d = super().INPUT_TYPES()
 
         if cls.CAMERAS is None:
-            cls.CAMERAS = camera_list() if JOV_SCAN_DEVICES else ["NONE"]
+            cls.CAMERAS = camera_list() if JOV_SCAN_DEVICES else ["0 -NONE"]
 
         return deep_merge({
             "optional": {
                 "CAMERA": (cls.CAMERAS, {"default": cls.CAMERAS[0], "tooltip": "The camera from the auto-scanned list"}),
-                "FLIP": ("BOOLEAN", {"default": False, "tooltip": "Camera flip image left-to-right"}),
                 "ZOOM": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1, "tooltip": "Camera zoom"}),
                 "FOCUS": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1, "tooltip": "Camera focus"}),
                 "EXPOSURE": ("INT", {"default": 50, "min": 0, "max": 100, "step": 1, "tooltip": "Camera exposure"})
@@ -181,16 +162,20 @@ Capture frames from a web camera. Supports batch processing, allowing multiple f
             self.device.pause()
         else:
             self.device.play()
-
-        self.device.flip = parse_param(kw, "FLIP", EnumConvertType.BOOLEAN, False)[0]
         self.device.zoom = parse_param(kw, "ZOOM", EnumConvertType.INT, 0, 0, 100)[0] / 100.
         self.device.focus = parse_param(kw, "FOCUS", EnumConvertType.INT, 0, 0, 100)[0] / 100.
         self.device.exposure = parse_param(kw, "EXPOSURE", EnumConvertType.INT, 0, 0, 100)[0] / 100.
+        flip = parse_param(kw, "FLIP", EnumConvertType.BOOLEAN, False)
+        reverse = parse_param(kw, "REVERSE", EnumConvertType.BOOLEAN, False)
 
         rate = 1. / self.device.fps
         pbar = ProgressBar(batch_size)
-        for idx in range(batch_size):
+        batch_size = [batch_size] * batch_size
+        params = list(zip_longest_fill(batch_size, flip, reverse))
+        for idx, (batch_size, flip, reverse) in enumerate(params):
             start_time = time.perf_counter()
+            self.device.flip = flip
+            self.device.reverse = reverse
             while True:
                 if not (img := self.device.frame) is None and img.sum() > 0:
                     break

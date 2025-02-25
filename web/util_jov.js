@@ -37,7 +37,8 @@ export async function api_post(route, id, cmd) {
 
 export async function api_get(route) {
     var response = await api.fetchApi(route, { cache: "no-store" });
-    return await response.json()
+    var text = await response.text();
+    return JSON.parse(text);
 }
 
 function widgetHide(node, widget, suffix = '') {

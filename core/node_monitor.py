@@ -96,12 +96,14 @@ Capture frames from a desktop monitor. Supports batch processing, allowing multi
         fps = parse_param(kw, "FPS", EnumConvertType.INT, 30)
         xy = parse_param(kw, "XY", EnumConvertType.VEC2INT, [(0,0)], 0)
         wh = parse_param(kw, "WH", EnumConvertType.VEC2INT, [(0,0)], 0)
+        flip = parse_param(kw, "FLIP", EnumConvertType.BOOLEAN, False)
+        reverse = parse_param(kw, "REVERSE", EnumConvertType.BOOLEAN, False)
 
         pbar = ProgressBar(batch_size)
         size = [batch_size] * batch_size
-        params = list(zip_longest_fill(monitor, fps, xy, wh, size))
+        params = list(zip_longest_fill(monitor, fps, xy, wh, flip, reverse, size))
         with mss.mss() as screen:
-            for idx, (monitor, fps, xy, wh, size) in enumerate(params):
+            for idx, (monitor, fps, xy, wh, flip, reverse, size) in enumerate(params):
 
                 try:
                     monitor = int(monitor.split('-')[0].strip())
@@ -127,9 +129,12 @@ Capture frames from a desktop monitor. Supports batch processing, allowing multi
                         'width': width,
                         'height': height
                     }
-                    print(region)
                     img = screen.grab(region)
                     img = cv2.cvtColor(np.array(img, dtype=np.uint8), cv2.COLOR_RGB2BGR)
+                    if flip:
+                        img = cv2.flip(img, 0)
+                    if reverse:
+                        img = cv2.flip(img, 1)
 
                 images.append(cv_to_tensor_full(img))
                 pbar.update_absolute(idx)

@@ -6,6 +6,7 @@ import time
 import platform
 from typing import Any, Dict, Optional, Tuple
 
+import cv2
 import torch
 import numpy as np
 import pywinctl as pwc
@@ -109,7 +110,7 @@ def window_capture(hwnd: int, client_area_only: bool=False, region: Optional[Tup
             width  = max_width  if rw == 0 else min(rw, max_width - x)
             height = max_height if rh == 0 else min(rh, max_height - y)
 
-        logger.info(f"Capture region: pos=({x},{y}) size=({width},{height})")
+        # logger.info(f"Capture region: pos=({x},{y}) size=({width},{height})")
 
         img = None
         try:
@@ -120,17 +121,6 @@ def window_capture(hwnd: int, client_area_only: bool=False, region: Optional[Tup
             bitmap.CreateCompatibleBitmap(dc, width, height)
             compatible_dc.SelectObject(bitmap)
 
-            # Set the correct source coordinates for BitBlt
-            """
-            compatible_dc.BitBlt(
-                (0, 0),
-                (width, height),
-                dc,
-                (capture_left, capture_top),
-                win32con.SRCCOPY
-            )
-            """
-
             result = windll.user32.PrintWindow(hwnd, compatible_dc.GetSafeHdc(), 0)
             if result is None:
                 return None
@@ -138,6 +128,8 @@ def window_capture(hwnd: int, client_area_only: bool=False, region: Optional[Tup
             img = np.frombuffer(bmpstr, dtype='uint8')
             img = img.reshape((height, width, 4))
             img = img[y:y+height, x:x+width]
+            img = img[..., [2, 1, 0, 3]]
+
         except Exception as e:
             logger.error(e)
         finally:
@@ -256,7 +248,7 @@ def window_capture(hwnd: int, client_area_only: bool=False, region: Optional[Tup
 @PromptServer.instance.routes.get(f"/{PACKAGE.lower()}/window")
 async def route_windowList(req) -> Any:
     WindowStreamReader.WINDOWS = window_list()
-    return web.json_response(WindowStreamReader.WINDOWS)
+    return web.json_response(WindowStreamReader.WINDOWS, content_type='application/json')
 
 # ==============================================================================
 # === NODE ===
@@ -299,10 +291,12 @@ Capture frames from a dekstop window. Supports batch processing, allowing multip
         xy = parse_param(kw, "XY", EnumConvertType.VEC2INT, [(0,0)], 0)
         wh = parse_param(kw, "WH", EnumConvertType.VEC2INT, [(0,0)], 0)
         client = parse_param(kw, "CLIENT", EnumConvertType.BOOLEAN, False)
+        flip = parse_param(kw, "FLIP", EnumConvertType.BOOLEAN, False)
+        reverse = parse_param(kw, "REVERSE", EnumConvertType.BOOLEAN, False)
         pbar = ProgressBar(batch_size)
         size = [batch_size] * batch_size
-        params = list(zip_longest_fill(window, fps, xy, wh, client, size))
-        for idx, (window, fps, xy, wh, client, size) in enumerate(params):
+        params = list(zip_longest_fill(window, fps, xy, wh, client, flip, reverse, size))
+        for idx, (window, fps, xy, wh, client, flip, reverse, size) in enumerate(params):
             try:
                 window = self.WINDOWS[window]
             except Exception as e:
@@ -312,6 +306,11 @@ Capture frames from a dekstop window. Supports batch processing, allowing multip
                 region = (xy[0], xy[1], wh[0], wh[1])
                 if (img := window_capture(window, client, region)) is None:
                     img = self.empty
+                else:
+                    if flip:
+                        img = cv2.flip(img, 0)
+                    if reverse:
+                        img = cv2.flip(img, 1)
 
             images.append(cv_to_tensor_full(img))
             if batch_size > 1:

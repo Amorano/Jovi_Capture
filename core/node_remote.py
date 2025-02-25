@@ -1,12 +1,10 @@
 """
-Jovi_Capture - http://www.github.com/amorano/Jovi_Capture
-REMOTE -- Capture remove URL
+Capture remote URL
 """
 
 import time
-from typing import Dict, Tuple
+from typing import Dict
 
-import cv2
 import torch
 
 from comfy.utils import ProgressBar
@@ -14,17 +12,19 @@ from comfy.utils import ProgressBar
 from cozy_comfyui import \
     EnumConvertType, \
     logger, \
-    deep_merge, parse_param
+    deep_merge, parse_param, zip_longest_fill
 
+from cozy_comfyui import RGBAMaskType
 from cozy_comfyui.image.convert import cv_to_tensor_full
 
-from . import StreamNodeHeader
+from . import VideoStreamNodeHeader
+from .stream import MediaStreamBase
 
 # ==============================================================================
 # === NODE ===
 # ==============================================================================
 
-class RemoteSteamReader(StreamNodeHeader):
+class RemoteSteamReader(VideoStreamNodeHeader):
     NAME = "REMOTE"
     DESCRIPTION = """
 Capture frames from a URL. Supports batch processing, allowing multiple frames to be captured simultaneously. The node provides options for configuring the source, resolution, frame rate, zoom, orientation, and interpolation method. Additionally, it supports capturing frames from multiple monitors or windows simultaneously.
@@ -40,55 +40,43 @@ Capture frames from a URL. Supports batch processing, allowing multiple frames t
             }
         }, d)
 
-    def __init__(self, *arg, **kw) -> None:
-        super().__init__(*arg, **kw)
-        self.__url = ""
-        self.__device = None # MediaStreamURL
+    def run(self, **kw) -> RGBAMaskType:
+        # need to see if we have a device...
+        if self.device is None:
+            self.device = MediaStreamBase()
 
-    def run(self, **kw) -> Tuple[torch.Tensor, torch.Tensor]:
-        wait = parse_param(kw, "WAIT", EnumConvertType.BOOLEAN, False)[0]
-        if wait:
-            return self.__last
         images = []
-        batch_size, rate = parse_param(kw, "BATCH", EnumConvertType.VEC2INT, [(1, 30)], 1)[0]
+        self.device.url = parse_param(kw, "URL", EnumConvertType.STRING, "")[0]
+        self.device.fps = parse_param(kw, "FPS", EnumConvertType.INT, 30)[0]
+        batch_size = parse_param(kw, "BATCH", EnumConvertType.INT, 1, 1)[0]
+        if parse_param(kw, "PAUSE", EnumConvertType.BOOLEAN, False)[0]:
+            self.device.pause()
+        else:
+            self.device.play()
+        self.device.timeout = parse_param(kw, "TIMEOUT", EnumConvertType.INT, 5, 1, 30)[0]
+        flip = parse_param(kw, "FLIP", EnumConvertType.BOOLEAN, False)
+        reverse = parse_param(kw, "REVERSE", EnumConvertType.BOOLEAN, False)
+
+        rate = 1. / self.device.fps
         pbar = ProgressBar(batch_size)
-        rate = 1. / rate
+        batch_size = [batch_size] * batch_size
+        params = list(zip_longest_fill(batch_size, flip, reverse))
+        for idx, (batch_size, flip, reverse) in enumerate(params):
+            start_time = time.perf_counter()
+            self.device.flip = flip
+            self.device.reverse = reverse
+            while True:
+                if not (img := self.device.frame) is None and img.sum() > 0:
+                    break
+                if time.perf_counter() - start_time > self.device.timeout:
+                    logger.error("could not capture device")
+                    img = self.empty
+                    break
 
-        url = parse_param(kw, "URL", EnumConvertType.STRING, "")[0]
-        url = url.split('-')[0].strip()
-        try:
-            _ = int(url)
-            url = str(url)
-        except: url = ""
-
-        # timeout and try again?
-        if self.__capturing > 0 and time.perf_counter() - self.__capturing > 3000:
-            logger.error(f'timed out {self.__url}')
-            self.__capturing = 0
-            self.__url = ""
-
-        if self.__device is not None:
-            self.__capturing = 0
-
-            if wait:
-                self.__device.pause()
-            else:
-                self.__device.play()
-
-            fps = parse_param(kw, "FPS", EnumConvertType.INT, 30)[0]
-            self.__device.fps = fps
-            self.__device.zoom = parse_param(kw, "ZOOM", EnumConvertType.FLOAT, 0, 0, 1)[0]
-
-            for idx in range(batch_size):
-                img = self.__device.frame
-                if img is None:
-                    images.append(self.__empty)
-                else:
-                    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGRA)
-                    images.append(cv_to_tensor_full(img))
-                pbar.update_absolute(idx)
-                if batch_size > 1:
-                    time.sleep(rate)
+            images.append(cv_to_tensor_full(img))
+            if batch_size > 1:
+                time.sleep(rate)
+            pbar.update_absolute(idx)
 
         if len(images) == 0:
             images.append(self.__empty)

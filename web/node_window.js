@@ -15,19 +15,22 @@ app.registerExtension({
             return
         }
 
-        const onNodeCreated = nodeType.prototype.onNodeCreated
-        nodeType.prototype.onNodeCreated = function () {
-            const me = onNodeCreated?.apply(this);
+        const refresh_windows = async(widget) => {
+            var data = await api_get("/jov_capture/window");
+            widget.options.values = Object.keys(data);
+            widget.value = widget.options.values[0];
+            app.canvas.setDirty(true);
+        }
 
+        const onNodeCreated = nodeType.prototype.onNodeCreated
+        nodeType.prototype.onNodeCreated = async function () {
+            const me = onNodeCreated?.apply(this);
             const widget_window = this.widgets.find(w => w.name == 'WINDOW');
 
             this.addWidget('button', 'REFRESH WINDOW LIST', 'refresh', async () => {
-                var data = await api_get("/jov_capture/window");
-                widget_window.options.values = Object.keys(data);
-                widget_window.value = widget_window.options.values[0];
-                console.info(widget_window)
-                app.canvas.setDirty(true);
+                refresh_windows(widget_window);
             });
+            await refresh_windows(widget_window);
             return me;
         }
 

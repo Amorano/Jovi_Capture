@@ -25,14 +25,16 @@ class MediaStreamBase:
         self.__frame = None
         self.__source = None
         self.__url = None
+        self.__reverse: bool = False
+        self.__flip: bool = False
         self.__height = 0
         self.__width = 0
         self.__thread = threading.Thread(target=self.__run, daemon=True)
         self.__thread.start()
 
     def __run(self) -> None:
+        start_time = time.perf_counter()
         while not self.__quit:
-            start_time = time.perf_counter()
             if not self.__source or not self.__source.isOpened():
                 logger.error("waiting on device")
                 time.sleep(0.5)
@@ -46,12 +48,17 @@ class MediaStreamBase:
                 while True:
                     ret, frame = self.__source.read()
                     if ret and frame is not None and frame.sum() > 0:
+                        if self.__flip:
+                            frame = cv2.flip(frame, 0)
+                        if self.__reverse:
+                            frame = cv2.flip(frame, 1)
+                        self.__frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGRA)
                         break
-                    if time.perf_counter() - start_time > self.__timeout:
+                    elif time.perf_counter() - start_time > self.__timeout:
                         logger.error("could not capture frame")
                         self.__quit = True
                         break
-                self.__frame = frame
+
                 """
                 if not ret:
                     count = int(self.__source.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -59,19 +66,24 @@ class MediaStreamBase:
                     if pos >= count:
                         self.__source.set(cv2.CAP_PROP_POS_FRAMES, 0)
                         ret, self.__frame = self.__source.read()
+                https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4
                 """
 
             elapsed = time.perf_counter() - start_time
             time.sleep(max(delta - elapsed, 0))
+            start_time = time.perf_counter()
         self.__end()
 
     def __repr__(self) -> str:
         return self.__class__.__name__
 
     def __end(self) -> None:
-        self.__quit = True
         if self.__thread:
-            self.__thread.join(timeout=self.__timeout)
+            try:
+                self.__thread.join(timeout=self.__timeout)
+            except RuntimeError as e:
+                pass
+        self.__quit = True
         if self.__source is not None:
             self.__source.release()
             self.__source = None
@@ -99,10 +111,9 @@ class MediaStreamBase:
         if new_source.isOpened():
             self.__source = new_source
             self.__url = url
-            logger.info(f"Captured camera device: {self.__url}")
-            return
-
-        logger.error(f"Failed to open camera source: {url}")
+            logger.info(f"captured url: {self.__url}")
+        else:
+            logger.error(f"failed to open source: {url}")
 
     @property
     def source(self) -> cv2.VideoCapture:
@@ -151,3 +162,19 @@ class MediaStreamBase:
         if self.__source is not None:
             self.__height = max(1, height)
             self.__source.set(cv2.CAP_PROP_FRAME_HEIGHT, self.__height)
+
+    @property
+    def flip(self) -> bool:
+        return self.__flip
+
+    @flip.setter
+    def flip(self, flip: bool) -> None:
+        self.__flip = flip
+
+    @property
+    def reverse(self) -> bool:
+        return self.__reverse
+
+    @flip.setter
+    def reverse(self, reverse: bool) -> None:
+        self.__reverse = reverse

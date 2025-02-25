@@ -15,18 +15,26 @@ app.registerExtension({
             return
         }
 
-        const onNodeCreated = nodeType.prototype.onNodeCreated
-        nodeType.prototype.onNodeCreated = function () {
-            const me = onNodeCreated?.apply(this);
+        const refresh_cameras = async(widget, force=false) => {
+            let url = "/jov_capture/camera"
+            if (force) {
+                url += "?force=true";
+            }
+            var data = await api_get(url);
+            widget.options.values = data;
+            widget.value = data[0];
+            app.canvas.setDirty(true);
+        }
 
+        const onNodeCreated = nodeType.prototype.onNodeCreated
+        nodeType.prototype.onNodeCreated = async function () {
+            const me = onNodeCreated?.apply(this);
             const widget_camera = this.widgets.find(w => w.name == 'CAMERA');
 
             this.addWidget('button', 'REFRESH CAMERA LIST', 'refresh', async () => {
-                var data = await api_get("/jov_capture/camera");
-                widget_camera.options.values = data;
-                widget_camera.value = data[0];
-                app.canvas.setDirty(true);
+                await refresh_cameras(widget_camera);
             });
+            await refresh_cameras(widget_camera, true);
             return me;
         }
 

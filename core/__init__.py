@@ -25,7 +25,8 @@ class StreamNodeHeader(CozyImageNode):
 
         return deep_merge(d, {
             "optional": {
-                # "WH": ("VEC2INT", {"default": [640, 480], "mij": 160, "tooltip": "width and height"}),
+                "FLIP": ("BOOLEAN", {"default": False, "tooltip": "Flip image top-to-bottom"}),
+                "REVERSE": ("BOOLEAN", {"default": False, "tooltip": "reverse image left-to-right"}),
                 "FPS": ("INT", {"default": 30, "min": 1, "max": 60,
                                 "tooltip": "Framerate to attempt when capturing"}),
                 "BATCH": ("INT", {"default": 1, "min": 1,

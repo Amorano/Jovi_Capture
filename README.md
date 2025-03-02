@@ -46,6 +46,9 @@ Please consider sponsoring me if you enjoy the results of my work, code or docum
 
 ## UPDATES
 
+**2025/03/02** @1.0.2:
+* adjusted js import paths
+
 **2025/03/01** @1.0.1:
 * pywinctl for monitor capture
 

@@ -277,9 +277,12 @@ Capture frames from a dekstop window. Supports batch processing, allowing multip
         return deep_merge({
             "optional": {
                 "WINDOW": (keys, {"default": default, "tooltip": "Window to capture"}),
-                "XY": ("VEC2INT", {"default": (0, 0), "mij": 0, "label": ["TOP", "LEFT"], "tooltip": "Top, Left position"}),
-                "WH": ("VEC2INT", {"default": (0, 0), "mij": 0, "label": ["WIDTH", "HEIGHT"], "tooltip": "Width and Height"}),
-                "CLIENT": ("BOOLEAN", {"default": False, "tooltip": "Only capture the client area -- no scrollbars or menus"}),
+                "XY": ("VEC2INT", {"default": (0, 0), "mij": 0, "label": ["TOP", "LEFT"],
+                                   "tooltip": "Top, Left position"}),
+                "WH": ("VEC2INT", {"default": (0, 0), "mij": 0, "label": ["WIDTH", "HEIGHT"],
+                                   "tooltip": "Width and Height"}),
+                "CLIENT": ("BOOLEAN", {"default": False,
+                                       "tooltip": "Only capture the client area -- no scrollbars or menus"}),
             }
         }, d)
 

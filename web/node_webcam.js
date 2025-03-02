@@ -3,7 +3,7 @@
  * Project: jov_capture
  */
 
-import { app } from "../../../scripts/app.js";
+import { app } from "../../scripts/app.js";
 import { api_get } from './util_jov.js'
 
 const _id = "CAMERA (JOV_CAPTURE)";

@@ -132,10 +132,14 @@ Capture frames from a web camera. Supports batch processing, allowing multiple f
 
         return deep_merge({
             "optional": {
-                "CAMERA": (cls.CAMERAS, {"default": cls.CAMERAS[0], "tooltip": "The camera from the auto-scanned list"}),
-                "ZOOM": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1, "tooltip": "Camera zoom"}),
-                "FOCUS": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1, "tooltip": "Camera focus"}),
-                "EXPOSURE": ("INT", {"default": 50, "min": 0, "max": 100, "step": 1, "tooltip": "Camera exposure"})
+                "CAMERA": (cls.CAMERAS, {"default": cls.CAMERAS[0],
+                                         "tooltip": "The camera from the auto-scanned list"}),
+                "ZOOM": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1,
+                                 "tooltip": "Camera zoom"}),
+                "FOCUS": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1,
+                                  "tooltip": "Camera focus"}),
+                "EXPOSURE": ("INT", {"default": 50, "min": 0, "max": 100, "step": 1,
+                                     "tooltip": "Camera exposure"})
             }
         }, d)
 

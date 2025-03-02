@@ -7,4 +7,5 @@ opencv-contrib-python
 Pillow
 pyobjc-framework-Quartz; platform_system=='Darwin'
 pywin32; platform_system=='Windows'
+pywinctl
 Xlib; platform_system=='Linux'

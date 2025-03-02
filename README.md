@@ -35,7 +35,14 @@ Please consider sponsoring me if you enjoy the results of my work, code or docum
 
 ## HIGHLIGHTS
 
-*
+<div align="center">
+<img src="https://github.com/user-attachments/assets/cc7a6483-401b-4049-9645-6f57a940fb70" alt="Jovi Streaming Node Family" width="768"/>
+</div>
+
+* `WINDOW` capture desktop windows or window regions
+* `CAMERA` webcam streaming and capture
+* `REMOTE` capture remote URL media streams
+* `MONITOR` snapshot local desktop monitor screen(s) or regions
 
 ## UPDATES
 

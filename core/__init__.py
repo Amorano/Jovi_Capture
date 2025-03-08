@@ -1,9 +1,6 @@
 """
-Jovi_Capture - http://www.github.com/amorano/Jovi_Capture
-Core
+Jovi_Capture - Core
 """
-
-__version__ = "1.0.0"
 
 from typing import Dict
 

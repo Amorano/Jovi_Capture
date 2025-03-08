@@ -1,6 +1,5 @@
 """
-Jovi_Capture - http://www.github.com/amorano/Jovi_Capture
-Core
+Jovi_Capture - Stream
 """
 
 import time
@@ -66,7 +65,6 @@ class MediaStreamBase:
                     if pos >= count:
                         self.__source.set(cv2.CAP_PROP_POS_FRAMES, 0)
                         ret, self.__frame = self.__source.read()
-                https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4
                 """
 
             elapsed = time.perf_counter() - start_time

@@ -46,6 +46,9 @@ Please consider sponsoring me if you enjoy the results of my work, code or docum
 
 ## UPDATES
 
+**2025/03/08** @1.0.3:
+* removed security scanner failures for in-line http links
+
 **2025/03/02** @1.0.2:
 * adjusted js import paths
 

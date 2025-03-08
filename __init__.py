@@ -7,7 +7,6 @@
  ╚════╝  ╚═════╝   ╚═══╝  ╚═╝     ╚═════╝╚═╝  ╚═╝╚═╝        ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚══════╝
 
                 Capture Webcamera and URL media streams as ComfyUI images
-                      http://www.github.com/amorano/Jovi_Capture
 """
 
 __author__ = "Alexander G. Morano"

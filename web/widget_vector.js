@@ -2,7 +2,6 @@
  * File: widget_vector.js
  */
 
-
 import { app } from "../../scripts/app.js"
 import { $el } from "../../scripts/ui.js"
 import { widgetToInput, widgetToWidget, domInnerValueChange } from './util_jov.js'
@@ -164,8 +163,9 @@ const VectorWidget = (app, inputName, options, initial, desc='') => {
 
         pointer.onClick = (eUp) => {
             /* if click on header, reset to defaults */
-            if (index == -1) {
+            if (index == -1 && eUp.shiftKey) {
                 widget.value = Object.assign({}, widget.options.default);
+                return;
             }
             else if (index >= 0 && index < size) {
                 const pos = [eUp.canvasX - node.pos[0], eUp.canvasY - node.pos[1]]

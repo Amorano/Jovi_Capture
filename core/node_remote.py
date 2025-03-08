@@ -43,7 +43,7 @@ Capture frames from a URL. Supports batch processing, allowing multiple frames t
 
     def run(self, **kw) -> RGBAMaskType:
         # need to see if we have a device...
-        # http://63.142.190.238:6106/mjpg/video.mjpg
+        # 63.142.190.238:6106/mjpg/video.mjpg
         if self.device is None:
             self.device = MediaStreamBase()
 

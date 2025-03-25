@@ -46,6 +46,9 @@ Please consider sponsoring me if you enjoy the results of my work, code or docum
 
 ## UPDATES
 
+**2025/03/18** @1.0.10:
+* dunno how to work around comfyui not doing type conversion
+
 **2025/03/18** @1.0.5:
 * vectors now convert in-line
 

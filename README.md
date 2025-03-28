@@ -46,6 +46,9 @@ Please consider sponsoring me if you enjoy the results of my work, code or docum
 
 ## UPDATES
 
+**2025/03/28** @1.0.11:
+* updated requirements for numpy to only be >=1.26.4
+
 **2025/03/18** @1.0.10:
 * dunno how to work around comfyui not doing type conversion
 

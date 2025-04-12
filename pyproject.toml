@@ -1,7 +1,7 @@
 [project]
 name = "jovi_capture"
 description = "Capture Webcamera and URL media streams as ComfyUI images"
-version = "1.0.11"
+version = "1.0.12"
 license = { file = "LICENSE" }
 readme = "README.md"
 authors = [{ name = "Alexander G. Morano", email = "amorano@gmail.com" }]

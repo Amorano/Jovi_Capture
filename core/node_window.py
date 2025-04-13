@@ -1,4 +1,4 @@
-"""Capture Dekstop Window"""
+""" Capture Dekstop Window """
 
 import re
 import json
@@ -7,7 +7,6 @@ import platform
 from typing import Any, Dict, Optional, Tuple
 
 import cv2
-import torch
 import numpy as np
 import pywinctl as pwc
 from aiohttp import web
@@ -20,9 +19,17 @@ from cozy_comfyui import \
     logger, \
     deep_merge, parse_param, zip_longest_fill
 
-from cozy_comfyui import RGBAMaskType
-from cozy_comfyui.image import ImageType
-from cozy_comfyui.image.convert import cv_to_tensor_full
+from cozy_comfyui import \
+    RGBAMaskType
+
+from cozy_comfyui.image import \
+    ImageType
+
+from cozy_comfyui.image.convert import \
+    cv_to_tensor_full
+
+from cozy_comfyui.image.misc import \
+    image_stack
 
 if platform.system() == "Windows":
     import win32gui
@@ -321,4 +328,4 @@ Capture frames from a dekstop window. Supports batch processing, allowing multip
                 time.sleep(rate)
             pbar.update_absolute(idx)
 
-        return [torch.stack(i) for i in zip(*images)]
+        return image_stack(images)

@@ -1,11 +1,7 @@
-"""
-Capture remote URL
-"""
+""" Capture remote URL """
 
 import time
 from typing import Dict
-
-import torch
 
 from comfy.utils import ProgressBar
 
@@ -14,8 +10,14 @@ from cozy_comfyui import \
     logger, \
     deep_merge, parse_param, zip_longest_fill
 
-from cozy_comfyui import RGBAMaskType
-from cozy_comfyui.image.convert import cv_to_tensor_full
+from cozy_comfyui import \
+    RGBAMaskType
+
+from cozy_comfyui.image.convert \
+    import cv_to_tensor_full
+
+from cozy_comfyui.image.misc import \
+    image_stack
 
 from . import VideoStreamNodeHeader
 from .stream import MediaStreamBase
@@ -82,5 +84,5 @@ Capture frames from a URL. Supports batch processing, allowing multiple frames t
 
         if len(images) == 0:
             images.append(self.__empty)
-        self.__last = [torch.stack(i) for i in zip(*images)]
+        self.__last = image_stack(images)
         return self.__last

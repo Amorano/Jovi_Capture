@@ -1,14 +1,14 @@
-"""
-Jovi_Capture - Core
-"""
+""" Jovi_Capture - Core """
 
 from typing import Dict
 
 import numpy as np
 
-from cozy_comfyui.node import CozyImageNode
+from cozy_comfyui.node import \
+    CozyImageNode
+
 from cozy_comfyui import \
-    MIN_IMAGE_SIZE, \
+    IMAGE_SIZE_MIN, \
     deep_merge
 
 # ==============================================================================
@@ -33,7 +33,7 @@ class StreamNodeHeader(CozyImageNode):
 
     def __init__(self, *arg, **kw) -> None:
         super().__init__(*arg, **kw)
-        self.empty = np.zeros((MIN_IMAGE_SIZE, MIN_IMAGE_SIZE, 4), dtype=np.uint8)
+        self.empty = np.zeros((IMAGE_SIZE_MIN, IMAGE_SIZE_MIN, 4), dtype=np.uint8)
 
 class VideoStreamNodeHeader(StreamNodeHeader):
     @classmethod

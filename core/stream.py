@@ -1,6 +1,4 @@
-"""
-Jovi_Capture - Stream
-"""
+""" Jovi_Capture - Stream """
 
 import time
 import threading
@@ -8,7 +6,8 @@ from typing import Any
 
 import cv2
 
-from cozy_comfyui import logger
+from cozy_comfyui import \
+    logger
 
 # ==============================================================================
 # === CLASS ===

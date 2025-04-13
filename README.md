@@ -46,6 +46,9 @@ Please consider sponsoring me if you enjoy the results of my work, code or docum
 
 ## UPDATES
 
+**2025/04/12** @1.0.13:
+* reduced dependancy on torch constructs
+
 **2025/04/12** @1.0.12:
 * updated requirements for numpy to be < 2.0.0
 

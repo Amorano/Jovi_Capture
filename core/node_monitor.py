@@ -1,11 +1,10 @@
-"""Capture Monitors"""
+""" Capture Monitors """
 
 import time
 from typing import Dict
 
 import cv2
 import mss
-import torch
 import numpy as np
 from PIL import ImageGrab
 
@@ -15,8 +14,15 @@ from cozy_comfyui import \
     RGBAMaskType, EnumConvertType, \
     logger, \
     deep_merge, parse_param, zip_longest_fill
-from cozy_comfyui.image import ImageType
-from cozy_comfyui.image.convert import cv_to_tensor_full
+
+from cozy_comfyui.image import \
+    ImageType
+
+from cozy_comfyui.image.convert import \
+    cv_to_tensor_full
+
+from cozy_comfyui.image.misc import \
+    image_stack
 
 from . import StreamNodeHeader
 
@@ -89,7 +95,7 @@ Capture frames from a desktop monitor. Supports batch processing, allowing multi
 
         if JOV_DOCKERENV:
             img = cv_to_tensor_full(self.empty)
-            return [torch.stack(i) for i in zip(*img)]
+            return image_stack(img)
 
         # only allow monitor to capture single one per "batch"
         images = []
@@ -146,4 +152,4 @@ Capture frames from a desktop monitor. Supports batch processing, allowing multi
                     rate = 1. / fps
                     time.sleep(rate)
 
-        return [torch.stack(i) for i in zip(*images)]
+        return image_stack(images)

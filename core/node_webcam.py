@@ -1,11 +1,10 @@
-"""Capture -- WEBCAM"""
+""" Capture -- WEBCAM """
 
 import os
 import time
 from typing import Any, Dict, List
 
 import cv2
-import torch
 import numpy as np
 from aiohttp import web
 
@@ -17,8 +16,14 @@ from cozy_comfyui import \
     logger, \
     deep_merge, parse_param, zip_longest_fill
 
-from cozy_comfyui import RGBAMaskType
-from cozy_comfyui.image.convert import cv_to_tensor_full
+from cozy_comfyui import \
+    RGBAMaskType
+
+from cozy_comfyui.image.convert import \
+    cv_to_tensor_full
+
+from cozy_comfyui.image.misc import \
+    image_stack
 
 from . import VideoStreamNodeHeader
 from .. import PACKAGE
@@ -151,7 +156,7 @@ Capture frames from a web camera. Supports batch processing, allowing multiple f
         except Exception:
             logger.warning(f"bad camera url {url}")
             img = cv_to_tensor_full(self.empty)
-            return [torch.stack(i) for i in zip(*img)]
+            return image_stack(img)
 
         if self.device is None:
             self.device = MediaStreamCamera()
@@ -193,4 +198,4 @@ Capture frames from a web camera. Supports batch processing, allowing multiple f
                 time.sleep(rate)
             pbar.update_absolute(idx)
 
-        return [torch.stack(i) for i in zip(*images)]
+        return image_stack(images)

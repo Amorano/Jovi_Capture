@@ -46,6 +46,9 @@ Please consider sponsoring me if you enjoy the results of my work, code or docum
 
 ## UPDATES
 
+**2025/04/19** @1.0.14:
+* removed old vector conversions waiting for new frontend mechanism
+
 **2025/04/12** @1.0.13:
 * reduced dependancy on torch constructs
 

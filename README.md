@@ -46,6 +46,11 @@ Please consider sponsoring me if you enjoy the results of my work, code or docum
 
 ## UPDATES
 
+**2025/04/30** @1.0.15:
+* cleaned up old JS supports
+* new comfy-cozy version
+* widget_vector unified to match Jovimetrix
+
 **2025/04/19** @1.0.14:
 * removed old vector conversions waiting for new frontend mechanism
 

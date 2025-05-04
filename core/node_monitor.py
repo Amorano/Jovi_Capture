@@ -81,15 +81,17 @@ Capture frames from a desktop monitor. Supports batch processing, allowing multi
         d = super().INPUT_TYPES()
         return deep_merge({
             "optional": {
-                "MONITOR": (cls.MONITOR, {
+                "monitor": (cls.MONITOR, {
                     "default": cls.MONITOR[0],
                     "choice": "list of system monitor devices",
                     "tooltip": "list of system monitor devices"}),
-                "XY": ("VEC2", {
-                    "default": (0, 0), "mij": 0, "int": True, "label": ["TOP", "LEFT"],
+                "xy": ("VEC2", {
+                    "default": (0, 0), "mij": 0, "int": True,
+                    "label": ["TOP", "LEFT"],
                     "tooltip": "Top, Left position"}),
-                "WH": ("VEC2", {
-                    "default": (0, 0), "mij": 0, "int": True, "label": ["WIDTH", "HEIGHT"],
+                "wh": ("VEC2", {
+                    "default": (0, 0), "mij": 0, "int": True,
+                    "label": ["WIDTH", "HEIGHT"],
                     "tooltip": "Width and Height"})
             }
         }, d)
@@ -102,15 +104,15 @@ Capture frames from a desktop monitor. Supports batch processing, allowing multi
 
         # only allow monitor to capture single one per "batch"
         images = []
-        batch_size = parse_param(kw, "BATCH", EnumConvertType.INT, 1, 1)[0]
+        batch_size = parse_param(kw, "batch", EnumConvertType.INT, 1, 1)[0]
 
         # allow these to "flex" length so as to animate
-        monitor = parse_param(kw, "MONITOR", EnumConvertType.STRING, "NONE")
-        fps = parse_param(kw, "FPS", EnumConvertType.INT, 30)
-        xy = parse_param(kw, "XY", EnumConvertType.VEC2INT, [(0,0)], 0)
-        wh = parse_param(kw, "WH", EnumConvertType.VEC2INT, [(0,0)], 0)
-        flip = parse_param(kw, "FLIP", EnumConvertType.BOOLEAN, False)
-        reverse = parse_param(kw, "REVERSE", EnumConvertType.BOOLEAN, False)
+        monitor = parse_param(kw, "monitor", EnumConvertType.STRING, "NONE")
+        fps = parse_param(kw, "fps", EnumConvertType.INT, 30)
+        xy = parse_param(kw, "xy", EnumConvertType.VEC2INT, (0,0), 0)
+        wh = parse_param(kw, "wh", EnumConvertType.VEC2INT, (0,0), 0)
+        flip = parse_param(kw, "flip", EnumConvertType.BOOLEAN, False)
+        reverse = parse_param(kw, "reverse", EnumConvertType.BOOLEAN, False)
 
         pbar = ProgressBar(batch_size)
         size = [batch_size] * batch_size

@@ -137,14 +137,18 @@ Capture frames from a web camera. Supports batch processing, allowing multiple f
 
         return deep_merge({
             "optional": {
-                "CAMERA": (cls.CAMERAS, {"default": cls.CAMERAS[0],
-                                         "tooltip": "The camera from the auto-scanned list"}),
-                "ZOOM": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1,
-                                 "tooltip": "Camera zoom"}),
-                "FOCUS": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1,
-                                  "tooltip": "Camera focus"}),
-                "EXPOSURE": ("INT", {"default": 50, "min": 0, "max": 100, "step": 1,
-                                     "tooltip": "Camera exposure"})
+                "camera": (cls.CAMERAS, {
+                    "default": cls.CAMERAS[0],
+                    "tooltip": "The camera from the auto-scanned list"}),
+                "zoom": ("INT", {
+                    "default": 0, "min": 0, "max": 100, "step": 1,
+                    "tooltip": "Camera zoom"}),
+                "focus": ("INT", {
+                    "default": 0, "min": 0, "max": 100, "step": 1,
+                    "tooltip": "Camera focus"}),
+                "exposure": ("INT", {
+                    "default": 50, "min": 0, "max": 100, "step": 1,
+                    "tooltip": "Camera exposure"})
             }
         }, d)
 
@@ -161,21 +165,21 @@ Capture frames from a web camera. Supports batch processing, allowing multiple f
         if self.device is None:
             self.device = MediaStreamCamera()
 
-        self.device.timeout = parse_param(kw, "TIMEOUT", EnumConvertType.INT, 5, 1, 30)[0]
+        self.device.timeout = parse_param(kw, "timeout", EnumConvertType.INT, 5, 1, 30)[0]
         self.device.url = url
 
         images = []
-        self.device.fps = parse_param(kw, "FPS", EnumConvertType.INT, 30)[0]
-        batch_size = parse_param(kw, "BATCH", EnumConvertType.INT, 1, 1)[0]
-        if parse_param(kw, "PAUSE", EnumConvertType.BOOLEAN, False)[0]:
+        self.device.fps = parse_param(kw, "fps", EnumConvertType.INT, 30)[0]
+        batch_size = parse_param(kw, "batch", EnumConvertType.INT, 1, 1)[0]
+        if parse_param(kw, "pause", EnumConvertType.BOOLEAN, False)[0]:
             self.device.pause()
         else:
             self.device.play()
-        self.device.zoom = parse_param(kw, "ZOOM", EnumConvertType.INT, 0, 0, 100)[0] / 100.
-        self.device.focus = parse_param(kw, "FOCUS", EnumConvertType.INT, 0, 0, 100)[0] / 100.
-        self.device.exposure = parse_param(kw, "EXPOSURE", EnumConvertType.INT, 0, 0, 100)[0] / 100.
-        flip = parse_param(kw, "FLIP", EnumConvertType.BOOLEAN, False)
-        reverse = parse_param(kw, "REVERSE", EnumConvertType.BOOLEAN, False)
+        self.device.zoom = parse_param(kw, "zoom", EnumConvertType.INT, 0, 0, 100)[0] / 100.
+        self.device.focus = parse_param(kw, "focus", EnumConvertType.INT, 0, 0, 100)[0] / 100.
+        self.device.exposure = parse_param(kw, "exposure", EnumConvertType.INT, 0, 0, 100)[0] / 100.
+        flip = parse_param(kw, "flip", EnumConvertType.BOOLEAN, False)
+        reverse = parse_param(kw, "reverse", EnumConvertType.BOOLEAN, False)
 
         rate = 1. / self.device.fps
         pbar = ProgressBar(batch_size)

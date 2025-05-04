@@ -38,8 +38,9 @@ Capture frames from a URL. Supports batch processing, allowing multiple frames t
 
         return deep_merge({
             "optional": {
-                "URL": ("STRING", {"default": "", "dynamicPrompts": False,
-                                   "tooltip":"A remote URL to stream"})
+                "url": ("STRING", {
+                    "default": "", "dynamicPrompts": False,
+                    "tooltip":"A remote URL to stream"})
             }
         }, d)
 
@@ -50,16 +51,16 @@ Capture frames from a URL. Supports batch processing, allowing multiple frames t
             self.device = MediaStreamBase()
 
         images = []
-        self.device.url = parse_param(kw, "URL", EnumConvertType.STRING, "")[0]
-        self.device.fps = parse_param(kw, "FPS", EnumConvertType.INT, 30)[0]
-        batch_size = parse_param(kw, "BATCH", EnumConvertType.INT, 1, 1)[0]
-        if parse_param(kw, "PAUSE", EnumConvertType.BOOLEAN, False)[0]:
+        self.device.url = parse_param(kw, "url", EnumConvertType.STRING, "")[0]
+        self.device.fps = parse_param(kw, "fps", EnumConvertType.INT, 30)[0]
+        batch_size = parse_param(kw, "batch", EnumConvertType.INT, 1, 1)[0]
+        if parse_param(kw, "pause", EnumConvertType.BOOLEAN, False)[0]:
             self.device.pause()
         else:
             self.device.play()
-        self.device.timeout = parse_param(kw, "TIMEOUT", EnumConvertType.INT, 8, 1, 30)[0]
-        flip = parse_param(kw, "FLIP", EnumConvertType.BOOLEAN, False)
-        reverse = parse_param(kw, "REVERSE", EnumConvertType.BOOLEAN, False)
+        self.device.timeout = parse_param(kw, "timeout", EnumConvertType.INT, 8, 1, 30)[0]
+        flip = parse_param(kw, "flip", EnumConvertType.BOOLEAN, False)
+        reverse = parse_param(kw, "reverse", EnumConvertType.BOOLEAN, False)
 
         rate = 1. / self.device.fps
         pbar = ProgressBar(batch_size)

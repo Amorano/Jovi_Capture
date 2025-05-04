@@ -32,12 +32,18 @@ class StreamNodeHeader(CozyImageNode):
 
         return deep_merge(d, {
             "optional": {
-                "FLIP": ("BOOLEAN", {"default": False, "tooltip": "Flip image top-to-bottom"}),
-                "REVERSE": ("BOOLEAN", {"default": False, "tooltip": "reverse image left-to-right"}),
-                "FPS": ("INT", {"default": 30, "min": 1, "max": 60,
-                                "tooltip": "Framerate to attempt when capturing"}),
-                "BATCH": ("INT", {"default": 1, "min": 1,
-                                  "tooltip": "Number of frames wanted at the Framerate in FPS"}),
+                "flip": ("BOOLEAN", {
+                    "default": False,
+                    "tooltip": "Flip image top-to-bottom"}),
+                "reverse": ("BOOLEAN", {
+                    "default": False,
+                    "tooltip": "reverse image left-to-right"}),
+                "fps": ("INT", {
+                    "default": 30, "min": 1, "max": 60,
+                    "tooltip": "Framerate to attempt when capturing"}),
+                "batch": ("INT", {
+                    "default": 1, "min": 1,
+                    "tooltip": "Number of frames wanted at the Framerate in FPS"}),
             }
         })
 
@@ -52,10 +58,12 @@ class VideoStreamNodeHeader(StreamNodeHeader):
 
         return deep_merge(d, {
             "optional": {
-                "PAUSE": ("BOOLEAN", {"default": False,
-                                      "tooltip": "If the stream should hold (pause) it's frame capture"}),
-                "TIMEOUT": ("INT", {"default": 5, "min": 5, "max": 30, "step": 1,
-                                    "tooltip": "How long to wait before failing if no frames are being captured"})
+                "pause": ("BOOLEAN", {
+                    "default": False,
+                    "tooltip": "If the stream should hold (pause) it's frame capture"}),
+                "timeout": ("INT", {
+                    "default": 5, "min": 5, "max": 30, "step": 1,
+                    "tooltip": "How long to wait before failing if no frames are being captured"})
             }
         })
 

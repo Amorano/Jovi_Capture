@@ -29,7 +29,7 @@ app.registerExtension({
         const onNodeCreated = nodeType.prototype.onNodeCreated
         nodeType.prototype.onNodeCreated = async function () {
             const me = onNodeCreated?.apply(this);
-            const widget_camera = this.widgets.find(w => w.name == 'CAMERA');
+            const widget_camera = this.widgets.find(w => w.name == 'camera');
 
             this.addWidget('button', 'REFRESH CAMERA LIST', 'refresh', async () => {
                 await refresh_cameras(widget_camera);

@@ -15,6 +15,9 @@ from cozy_comfyui import \
     logger, \
     deep_merge, parse_param, zip_longest_fill
 
+from cozy_comfyui.lexicon import \
+    Lexicon
+
 from cozy_comfyui.image import \
     ImageType
 
@@ -79,22 +82,22 @@ Capture frames from a desktop monitor. Supports batch processing, allowing multi
             cls.MONITOR = ["NONE"]
 
         d = super().INPUT_TYPES()
-        return deep_merge({
+        d = deep_merge({
             "optional": {
-                "monitor": (cls.MONITOR, {
+                Lexicon.MONITOR: (cls.MONITOR, {
                     "default": cls.MONITOR[0],
                     "choice": "list of system monitor devices",
                     "tooltip": "list of system monitor devices"}),
-                "xy": ("VEC2", {
+                Lexicon.XY: ("VEC2", {
                     "default": (0, 0), "mij": 0, "int": True,
                     "label": ["TOP", "LEFT"],
                     "tooltip": "Top, Left position"}),
-                "wh": ("VEC2", {
+                Lexicon.WH: ("VEC2", {
                     "default": (0, 0), "mij": 0, "int": True,
-                    "label": ["WIDTH", "HEIGHT"],
-                    "tooltip": "Width and Height"})
+                    "label": ["WIDTH", "HEIGHT"]})
             }
         }, d)
+        return Lexicon._parse(d)
 
     def run(self, **kw) -> RGBAMaskType:
 
@@ -104,21 +107,21 @@ Capture frames from a desktop monitor. Supports batch processing, allowing multi
 
         # only allow monitor to capture single one per "batch"
         images = []
-        batch_size = parse_param(kw, "batch", EnumConvertType.INT, 1, 1)[0]
 
         # allow these to "flex" length so as to animate
-        monitor = parse_param(kw, "monitor", EnumConvertType.STRING, "NONE")
-        fps = parse_param(kw, "fps", EnumConvertType.INT, 30)
-        xy = parse_param(kw, "xy", EnumConvertType.VEC2INT, (0,0), 0)
-        wh = parse_param(kw, "wh", EnumConvertType.VEC2INT, (0,0), 0)
-        flip = parse_param(kw, "flip", EnumConvertType.BOOLEAN, False)
-        reverse = parse_param(kw, "reverse", EnumConvertType.BOOLEAN, False)
+        monitor = parse_param(kw, Lexicon.MONITOR, EnumConvertType.STRING, "NONE")
+        xy = parse_param(kw, Lexicon.XY, EnumConvertType.VEC2INT, (0,0), 0)
+        wh = parse_param(kw, Lexicon.WH, EnumConvertType.VEC2INT, (0,0), 0)
+        flip = parse_param(kw, Lexicon.FLIP, EnumConvertType.BOOLEAN, False)
+        reverse = parse_param(kw, Lexicon.REVERSE, EnumConvertType.BOOLEAN, False)
+        fps = parse_param(kw, Lexicon.FPS, EnumConvertType.INT, 30)
+        batch_size = parse_param(kw, "batch", EnumConvertType.INT, 1, 1)[0]
 
         pbar = ProgressBar(batch_size)
         size = [batch_size] * batch_size
-        params = list(zip_longest_fill(monitor, fps, xy, wh, flip, reverse, size))
+        params = list(zip_longest_fill(monitor, xy, wh, flip, reverse, fps, size))
         with mss.mss() as screen:
-            for idx, (monitor, fps, xy, wh, flip, reverse, size) in enumerate(params):
+            for idx, (monitor, xy, wh, flip, reverse, fps, size) in enumerate(params):
 
                 try:
                     monitor = int(monitor.split('-')[0].strip())

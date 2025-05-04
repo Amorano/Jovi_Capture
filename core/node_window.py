@@ -22,6 +22,9 @@ from cozy_comfyui import \
 from cozy_comfyui import \
     RGBAMaskType
 
+from cozy_comfyui.lexicon import \
+    Lexicon
+
 from cozy_comfyui.image import \
     ImageType
 
@@ -281,35 +284,35 @@ Capture frames from a dekstop window. Supports batch processing, allowing multip
             keys = list(cls.WINDOWS.keys())
             default = keys[0]
 
-        return deep_merge({
+        d = deep_merge({
             "optional": {
-                "window": (keys, {
+                Lexicon.WINDOW: (keys, {
                     "default": default,
                     "tooltip": "Window to capture"}),
-                "xy": ("VEC2", {
+                Lexicon.XY: ("VEC2", {
                     "default": (0, 0), "mij": 0, "int": True,
                     "label": ["TOP", "LEFT"],
                     "tooltip": "Top, Left position"}),
-                "wh": ("VEC2", {
+                Lexicon.WH: ("VEC2", {
                     "default": (0, 0), "mij": 0, "int": True,
-                    "label": ["WIDTH", "HEIGHT"],
-                    "tooltip": "Width and Height"}),
-                "client": ("BOOLEAN", {
+                    "label": ["WIDTH", "HEIGHT"]}),
+                Lexicon.CLIENT: ("BOOLEAN", {
                     "default": False,
                     "tooltip": "Only capture the client area -- no scrollbars or menus"}),
             }
         }, d)
+        return Lexicon._parse(d)
 
     def run(self, **kw) -> RGBAMaskType:
         images = []
-        batch_size = parse_param(kw, "batch", EnumConvertType.INT, 1, 1)[0]
-        window = parse_param(kw, "window", EnumConvertType.STRING, "")
-        fps = parse_param(kw, "fps", EnumConvertType.INT, 30)
-        xy = parse_param(kw, "xy", EnumConvertType.VEC2INT, (0,0), 0)
-        wh = parse_param(kw, "wh", EnumConvertType.VEC2INT, (0,0), 0)
-        client = parse_param(kw, "client", EnumConvertType.BOOLEAN, False)
-        flip = parse_param(kw, "flip", EnumConvertType.BOOLEAN, False)
-        reverse = parse_param(kw, "reverse", EnumConvertType.BOOLEAN, False)
+        batch_size = parse_param(kw, Lexicon.BATCH, EnumConvertType.INT, 1, 1)[0]
+        window = parse_param(kw, Lexicon.WINDOW, EnumConvertType.STRING, "")
+        fps = parse_param(kw, Lexicon.FPS, EnumConvertType.INT, 30)
+        xy = parse_param(kw, Lexicon.XY, EnumConvertType.VEC2INT, (0,0), 0)
+        wh = parse_param(kw, Lexicon.WH, EnumConvertType.VEC2INT, (0,0), 0)
+        client = parse_param(kw, Lexicon.CLIENT, EnumConvertType.BOOLEAN, False)
+        flip = parse_param(kw, Lexicon.FLIP, EnumConvertType.BOOLEAN, False)
+        reverse = parse_param(kw, Lexicon.REVERSE, EnumConvertType.BOOLEAN, False)
         pbar = ProgressBar(batch_size)
         size = [batch_size] * batch_size
         params = list(zip_longest_fill(window, fps, xy, wh, client, flip, reverse, size))

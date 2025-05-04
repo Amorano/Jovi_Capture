@@ -19,6 +19,9 @@ from cozy_comfyui import \
 from cozy_comfyui import \
     RGBAMaskType
 
+from cozy_comfyui.lexicon import \
+    Lexicon
+
 from cozy_comfyui.image.convert import \
     cv_to_tensor_full
 
@@ -135,26 +138,24 @@ Capture frames from a web camera. Supports batch processing, allowing multiple f
         if cls.CAMERAS is None:
             cls.CAMERAS = camera_list() if JOV_SCAN_DEVICES else ["0 -NONE"]
 
-        return deep_merge({
+        d = deep_merge({
             "optional": {
-                "camera": (cls.CAMERAS, {
+                Lexicon.CAMERA: (cls.CAMERAS, {
                     "default": cls.CAMERAS[0],
-                    "tooltip": "The camera from the auto-scanned list"}),
-                "zoom": ("INT", {
-                    "default": 0, "min": 0, "max": 100, "step": 1,
-                    "tooltip": "Camera zoom"}),
-                "focus": ("INT", {
-                    "default": 0, "min": 0, "max": 100, "step": 1,
-                    "tooltip": "Camera focus"}),
-                "exposure": ("INT", {
-                    "default": 50, "min": 0, "max": 100, "step": 1,
-                    "tooltip": "Camera exposure"})
+                    "tooltip": "Camera from auto-scanned list"}),
+                Lexicon.ZOOM: ("INT", {
+                    "default": 0, "min": 0, "max": 100, "step": 1}),
+                Lexicon.FOCUS: ("INT", {
+                    "default": 0, "min": 0, "max": 100, "step": 1}),
+                Lexicon.EXPOSURE: ("INT", {
+                    "default": 50, "min": 0, "max": 100, "step": 1})
             }
         }, d)
+        return Lexicon._parse(d)
 
     def run(self, **kw) -> RGBAMaskType:
         # need to see if we have a device...
-        url = parse_param(kw, "CAMERA", EnumConvertType.STRING, "")[0]
+        url = parse_param(kw, Lexicon.CAMERA, EnumConvertType.STRING, "")[0]
         try:
             url = int(url.split('-')[0].strip())
         except Exception:
@@ -165,21 +166,21 @@ Capture frames from a web camera. Supports batch processing, allowing multiple f
         if self.device is None:
             self.device = MediaStreamCamera()
 
-        self.device.timeout = parse_param(kw, "timeout", EnumConvertType.INT, 5, 1, 30)[0]
+        self.device.timeout = parse_param(kw, Lexicon.TIMEOUT, EnumConvertType.INT, 8, 1, 30)[0]
         self.device.url = url
 
         images = []
-        self.device.fps = parse_param(kw, "fps", EnumConvertType.INT, 30)[0]
-        batch_size = parse_param(kw, "batch", EnumConvertType.INT, 1, 1)[0]
-        if parse_param(kw, "pause", EnumConvertType.BOOLEAN, False)[0]:
+        self.device.fps = parse_param(kw, Lexicon.FPS, EnumConvertType.INT, 30)[0]
+        batch_size = parse_param(kw, Lexicon.BATCH, EnumConvertType.INT, 1, 1)[0]
+        if parse_param(kw, Lexicon.PAUSE, EnumConvertType.BOOLEAN, False)[0]:
             self.device.pause()
         else:
             self.device.play()
-        self.device.zoom = parse_param(kw, "zoom", EnumConvertType.INT, 0, 0, 100)[0] / 100.
-        self.device.focus = parse_param(kw, "focus", EnumConvertType.INT, 0, 0, 100)[0] / 100.
-        self.device.exposure = parse_param(kw, "exposure", EnumConvertType.INT, 0, 0, 100)[0] / 100.
-        flip = parse_param(kw, "flip", EnumConvertType.BOOLEAN, False)
-        reverse = parse_param(kw, "reverse", EnumConvertType.BOOLEAN, False)
+        self.device.zoom = parse_param(kw, Lexicon.ZOOM, EnumConvertType.INT, 0, 0, 100)[0] / 100.
+        self.device.focus = parse_param(kw, Lexicon.FOCUS, EnumConvertType.INT, 0, 0, 100)[0] / 100.
+        self.device.exposure = parse_param(kw, Lexicon.EXPOSURE, EnumConvertType.INT, 0, 0, 100)[0] / 100.
+        flip = parse_param(kw, Lexicon.FLIP, EnumConvertType.BOOLEAN, False)
+        reverse = parse_param(kw, Lexicon.REVERSE, EnumConvertType.BOOLEAN, False)
 
         rate = 1. / self.device.fps
         pbar = ProgressBar(batch_size)

@@ -4,6 +4,9 @@ from typing import Dict
 
 import numpy as np
 
+from cozy_comfyui.lexicon import \
+    Lexicon
+
 from cozy_comfyui.node import \
     CozyImageNode
 
@@ -32,16 +35,14 @@ class StreamNodeHeader(CozyImageNode):
 
         return deep_merge(d, {
             "optional": {
-                "flip": ("BOOLEAN", {
+                Lexicon.FLIP: ("BOOLEAN", {
+                    "default": False}),
+                Lexicon.REVERSE: ("BOOLEAN", {
                     "default": False,
-                    "tooltip": "Flip image top-to-bottom"}),
-                "reverse": ("BOOLEAN", {
-                    "default": False,
-                    "tooltip": "reverse image left-to-right"}),
-                "fps": ("INT", {
-                    "default": 30, "min": 1, "max": 60,
-                    "tooltip": "Framerate to attempt when capturing"}),
-                "batch": ("INT", {
+                    "tooltip": "Reverse image left-to-right"}),
+                Lexicon.FPS: ("INT", {
+                    "default": 30, "min": 1, "max": 60}),
+                Lexicon.BATCH: ("INT", {
                     "default": 1, "min": 1,
                     "tooltip": "Number of frames wanted at the Framerate in FPS"}),
             }
@@ -58,12 +59,11 @@ class VideoStreamNodeHeader(StreamNodeHeader):
 
         return deep_merge(d, {
             "optional": {
-                "pause": ("BOOLEAN", {
+                Lexicon.PAUSE: ("BOOLEAN", {
                     "default": False,
-                    "tooltip": "If the stream should hold (pause) it's frame capture"}),
-                "timeout": ("INT", {
-                    "default": 5, "min": 5, "max": 30, "step": 1,
-                    "tooltip": "How long to wait before failing if no frames are being captured"})
+                    "tooltip": "Hold (pause) frame capture"}),
+                Lexicon.TIMEOUT: ("INT", {
+                    "default": 8, "min": 5, "max": 30, "step": 1})
             }
         })
 

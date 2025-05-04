@@ -13,6 +13,9 @@ from cozy_comfyui import \
 from cozy_comfyui import \
     RGBAMaskType
 
+from cozy_comfyui.lexicon import \
+    Lexicon
+
 from cozy_comfyui.image.convert \
     import cv_to_tensor_full
 
@@ -36,13 +39,14 @@ Capture frames from a URL. Supports batch processing, allowing multiple frames t
     def INPUT_TYPES(cls) -> Dict[str, str]:
         d = super().INPUT_TYPES()
 
-        return deep_merge({
+        d = deep_merge({
             "optional": {
-                "url": ("STRING", {
+                Lexicon.URL: ("STRING", {
                     "default": "", "dynamicPrompts": False,
                     "tooltip":"A remote URL to stream"})
             }
         }, d)
+        return Lexicon._parse(d)
 
     def run(self, **kw) -> RGBAMaskType:
         # need to see if we have a device...
@@ -51,22 +55,24 @@ Capture frames from a URL. Supports batch processing, allowing multiple frames t
             self.device = MediaStreamBase()
 
         images = []
-        self.device.url = parse_param(kw, "url", EnumConvertType.STRING, "")[0]
-        self.device.fps = parse_param(kw, "fps", EnumConvertType.INT, 30)[0]
-        batch_size = parse_param(kw, "batch", EnumConvertType.INT, 1, 1)[0]
-        if parse_param(kw, "pause", EnumConvertType.BOOLEAN, False)[0]:
+        self.device.url = parse_param(kw, Lexicon.URL, EnumConvertType.STRING, "")[0]
+        if parse_param(kw, Lexicon.PAUSE, EnumConvertType.BOOLEAN, False)[0]:
             self.device.pause()
         else:
             self.device.play()
-        self.device.timeout = parse_param(kw, "timeout", EnumConvertType.INT, 8, 1, 30)[0]
-        flip = parse_param(kw, "flip", EnumConvertType.BOOLEAN, False)
-        reverse = parse_param(kw, "reverse", EnumConvertType.BOOLEAN, False)
+
+        self.device.timeout = parse_param(kw, Lexicon.TIMEOUT, EnumConvertType.INT, 8, 1, 30)[0]
+        flip = parse_param(kw, Lexicon.FLIP, EnumConvertType.BOOLEAN, False)
+        reverse = parse_param(kw, Lexicon.REVERSE, EnumConvertType.BOOLEAN, False)
+        self.device.fps = parse_param(kw, Lexicon.FPS, EnumConvertType.INT, 30)[0]
+        batch_size = parse_param(kw, Lexicon.BATCH, EnumConvertType.INT, 1, 1)[0]
+
 
         rate = 1. / self.device.fps
         pbar = ProgressBar(batch_size)
         batch_size = [batch_size] * batch_size
-        params = list(zip_longest_fill(batch_size, flip, reverse))
-        for idx, (batch_size, flip, reverse) in enumerate(params):
+        params = list(zip_longest_fill(flip, reverse, batch_size))
+        for idx, (flip, reverse, batch_size) in enumerate(params):
             start_time = time.perf_counter()
             self.device.flip = flip
             self.device.reverse = reverse

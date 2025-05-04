@@ -25,7 +25,7 @@ app.registerExtension({
         const onNodeCreated = nodeType.prototype.onNodeCreated
         nodeType.prototype.onNodeCreated = async function () {
             const me = onNodeCreated?.apply(this);
-            const widget_window = this.widgets.find(w => w.name == 'WINDOW');
+            const widget_window = this.widgets.find(w => w.name == 'window');
 
             this.addWidget('button', 'REFRESH WINDOW LIST', 'refresh', async () => {
                 refresh_windows(widget_window);

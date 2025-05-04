@@ -57,7 +57,7 @@ Capture frames from a URL. Supports batch processing, allowing multiple frames t
             self.device.pause()
         else:
             self.device.play()
-        self.device.timeout = parse_param(kw, "TIMEOUT", EnumConvertType.INT, 5, 1, 30)[0]
+        self.device.timeout = parse_param(kw, "TIMEOUT", EnumConvertType.INT, 8, 1, 30)[0]
         flip = parse_param(kw, "FLIP", EnumConvertType.BOOLEAN, False)
         reverse = parse_param(kw, "REVERSE", EnumConvertType.BOOLEAN, False)
 

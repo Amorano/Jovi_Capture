@@ -46,6 +46,10 @@ Please consider sponsoring me if you enjoy the results of my work, code or docum
 
 ## UPDATES
 
+**2025/04/30** @1.0.16:
+* VEC2INT converted to VEC2
+* better timeout default
+
 **2025/04/30** @1.0.15:
 * cleaned up old JS supports
 * new comfy-cozy version

@@ -81,13 +81,16 @@ Capture frames from a desktop monitor. Supports batch processing, allowing multi
         d = super().INPUT_TYPES()
         return deep_merge({
             "optional": {
-                "MONITOR": (cls.MONITOR, {"default": cls.MONITOR[0],
-                                          "choice": "list of system monitor devices",
-                                          "tooltip": "list of system monitor devices"}),
-                "XY": ("VEC2INT", {"default": (0, 0), "mij": 0, "label": ["TOP", "LEFT"],
-                                   "tooltip": "Top, Left position"}),
-                "WH": ("VEC2INT", {"default": (0, 0), "mij": 0, "label": ["WIDTH", "HEIGHT"],
-                                   "tooltip": "Width and Height"})
+                "MONITOR": (cls.MONITOR, {
+                    "default": cls.MONITOR[0],
+                    "choice": "list of system monitor devices",
+                    "tooltip": "list of system monitor devices"}),
+                "XY": ("VEC2", {
+                    "default": (0, 0), "mij": 0, "int": True, "label": ["TOP", "LEFT"],
+                    "tooltip": "Top, Left position"}),
+                "WH": ("VEC2", {
+                    "default": (0, 0), "mij": 0, "int": True, "label": ["WIDTH", "HEIGHT"],
+                    "tooltip": "Width and Height"})
             }
         }, d)
 

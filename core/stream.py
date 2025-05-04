@@ -15,7 +15,7 @@ from cozy_comfyui import \
 
 class MediaStreamBase:
 
-    def __init__(self, fps:float=30, timeout:float=5) -> None:
+    def __init__(self, fps:float=30, timeout:float=8) -> None:
         self.__fps = fps
         self.__timeout = min(30, max(0.5, timeout))
         self.__running = True

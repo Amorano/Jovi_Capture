@@ -16,6 +16,16 @@ from cozy_comfyui import \
 # ==============================================================================
 
 class StreamNodeHeader(CozyImageNode):
+    NOT_IDEMPOTENT = True
+
+    @classmethod
+    def IS_CHANGED(cls, **kw) -> float:
+        return float('nan')
+
+    @classmethod
+    def VALIDATE_INPUTS(cls, input_types) -> bool:
+        return True
+
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, str]:
         d = super().INPUT_TYPES()

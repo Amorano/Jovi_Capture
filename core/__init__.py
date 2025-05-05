@@ -32,8 +32,7 @@ class StreamNodeHeader(CozyImageNode):
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, str]:
         d = super().INPUT_TYPES()
-
-        return deep_merge(d, {
+        d = deep_merge(d, {
             "optional": {
                 Lexicon.FLIP: ("BOOLEAN", {
                     "default": False}),
@@ -47,6 +46,7 @@ class StreamNodeHeader(CozyImageNode):
                     "tooltip": "Number of frames wanted at the Framerate in FPS"}),
             }
         })
+        return Lexicon._parse(d)
 
     def __init__(self, *arg, **kw) -> None:
         super().__init__(*arg, **kw)
@@ -56,8 +56,7 @@ class VideoStreamNodeHeader(StreamNodeHeader):
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, str]:
         d = super().INPUT_TYPES()
-
-        return deep_merge(d, {
+        d = deep_merge(d, {
             "optional": {
                 Lexicon.PAUSE: ("BOOLEAN", {
                     "default": False,
@@ -66,6 +65,7 @@ class VideoStreamNodeHeader(StreamNodeHeader):
                     "default": 8, "min": 5, "max": 30, "step": 1})
             }
         })
+        return Lexicon._parse(d)
 
     def __init__(self, *arg, **kw) -> None:
         super().__init__(*arg, **kw)

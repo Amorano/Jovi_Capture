@@ -46,7 +46,10 @@ Please consider sponsoring me if you enjoy the results of my work, code or docum
 
 ## UPDATES
 
-**2025/04** @1.1.0:
+**2025/05/16** @1.1.1:
+* updated to comfy_cozy 0.0.25
+
+**2025/04/30** @1.1.0:
 * widget definitions formatted for clarity
 * align names to Lexicon in comfy_cozy
 

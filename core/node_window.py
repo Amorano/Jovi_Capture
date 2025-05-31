@@ -115,7 +115,6 @@ def window_capture(hwnd: int, client_area_only: bool=False, region: Optional[Tup
             width, height = max_width, max_height
         else:
             rl, rt, rw, rh = region
-            print(rl, rt, rw, rh)
             x = min(max(0, rl), max_width - 1)
             y = min(max(0, rt), max_height - 1)
             width  = max_width  if rw == 0 else min(x + rw, max_width)

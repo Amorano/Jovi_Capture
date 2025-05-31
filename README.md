@@ -46,6 +46,10 @@ Please consider sponsoring me if you enjoy the results of my work, code or docum
 
 ## UPDATES
 
+**2025/05/31** @1.1.2:
+* updated to comfy_cozy 0.0.32
+* fixed bug in size capture when using non-zero offsets
+
 **2025/05/16** @1.1.1:
 * updated to comfy_cozy 0.0.25
 
